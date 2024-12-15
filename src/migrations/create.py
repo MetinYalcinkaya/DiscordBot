@@ -15,7 +15,8 @@ sql_tables = {
     )""",
     "USER_STOCK": """CREATE TABLE USER_STOCK(
         user_id CHAR(20) NOT NULL,
-        stock_url VARCHAR(255) NOT NULL
+        stock_url VARCHAR(255) NOT NULL,
+        stock_name VARCHAR(50) NOT NULL 
     )""",
 }
 

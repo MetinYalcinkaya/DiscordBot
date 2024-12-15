@@ -1,3 +1,5 @@
+from typing import List
+
 import discord
 
 from db.connect import Session
@@ -18,9 +20,9 @@ def get_user(user: discord.Member) -> User | None:
         return session.query(User).filter(User.user_id == user.id).one_or_none()
 
 
-def add_stock(user: discord.Member, url):
+def add_stock(user: discord.Member, url, stock_name):
     with Session() as session:
-        db_stock = User_Stock(user_id=user.id, stock_url=url)
+        db_stock = User_Stock(user_id=user.id, stock_url=url, stock_name=stock_name)
         session.add(db_stock)
         session.commit()
 
@@ -32,3 +34,8 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
             .filter(User_Stock.user_id == user.id, User_Stock.stock_url == url)
             .one_or_none()
         )
+
+
+def get_all_stocks(user: discord.Member) -> List[User_Stock] | None:
+    with Session() as session:
+        return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
