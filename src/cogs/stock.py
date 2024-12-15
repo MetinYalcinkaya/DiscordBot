@@ -5,7 +5,7 @@ import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
-from src.db.utils import get_user
+import db.utils as db
 
 
 class Stock(commands.Cog):
@@ -14,12 +14,21 @@ class Stock(commands.Cog):
 
     @commands.command(name="add")
     async def add_watching(self, ctx, url):
-        # first check if user is in db
-        if get_user == None:
-            print("User doesn't exist")
+        # check if user is in db
+        if db.get_user(ctx.author) == None:
+            print("User doesn't exist, adding to database")
+            db.add_user(ctx.author)
+        else:
+            print("User already exists")
 
-        print(ctx.author.id)
-        await ctx.send(f"Added {url}")
+        # check if stock is in db for user
+        if db.get_stock(ctx.author, url) == None:
+            print("Stock not watched, adding")
+            await ctx.send(f"Adding {url} to your watching!")
+            db.add_stock(ctx.author, url)
+        else:
+            print("Stock already watched")
+            await ctx.send(f"{url} is already being watched!")
 
 
 def setup(bot):

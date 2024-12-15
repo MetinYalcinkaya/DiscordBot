@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Unicode, create_engine
 from sqlalchemy.orm import declarative_base
 
-from src.config import DB_DIR
+from config import DB_DIR
 
 engine = create_engine(str(DB_DIR))
 Base = declarative_base()

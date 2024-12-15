@@ -10,12 +10,12 @@ cursor = conn.cursor()
 
 sql_tables = {
     "USER": """CREATE TABLE User(
-        UserID CHAR(20) NOT NULL,
-        Username CHAR(50) NOT NULL
+        user_id CHAR(20) NOT NULL,
+        username CHAR(50) NOT NULL
     )""",
     "USER_STOCK": """CREATE TABLE USER_STOCK(
-        UserID CHAR(20) NOT NULL,
-        StockURL VARCHAR(255) NOT NULL
+        user_id CHAR(20) NOT NULL,
+        stock_url VARCHAR(255) NOT NULL
     )""",
 }
 

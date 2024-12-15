@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
-from src.config import DB_DIR
+from config import DB_DIR
 
 engine = create_engine(str(DB_DIR))
 
