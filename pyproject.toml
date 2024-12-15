@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "discordbot"
+version = "0.1.0"
+description = "Discord bot w/ various functionality"
+authors = ["Metin Yalcinkaya <metinyalcinkaya@hotmail.com.au>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+py-cord = "^2.6.1"
+python-dotenv = "^1.0.1"
+sqlalchemy = "^2.0.36"
+beautifulsoup4 = "^4.12.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
