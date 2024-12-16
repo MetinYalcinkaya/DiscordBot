@@ -1,8 +1,6 @@
-import asyncio
-import time
+from enum import Enum
 from urllib.request import Request, urlopen
 
-import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
@@ -43,7 +41,11 @@ class Stock(commands.Cog):
         message = ""
         if items != None:
             for item in items:
-                in_stock = await check_stock(item.stock_url)
+                in_stock = (
+                    "In stock"
+                    if await check_stock(item.stock_url) == 1
+                    else "Out of stock"
+                )
                 message += f"[{item.stock_name}]({item.stock_url}): Current stock: {in_stock}\n"
         await ctx.send(message)
 
@@ -52,7 +54,12 @@ def setup(bot):
     bot.add_cog(Stock(bot))
 
 
-async def check_stock(url) -> str:
+class Stock_Status(Enum):
+    OUT_OF_STOCK = 0
+    IN_STOCK = 1
+
+
+async def check_stock(url) -> int:
     req = Request(url)
     page = urlopen(req).read()
 
@@ -65,10 +72,10 @@ async def check_stock(url) -> str:
 
     if in_stock_bool:
         print("Product is in stock!")
-        return "In stock"
+        return Stock_Status.IN_STOCK.value
     else:
         print("Product is out of stock")
-        return "Out of stock"
+        return Stock_Status.OUT_OF_STOCK.value
 
     # start = time.time()
     # while True:
@@ -81,7 +88,6 @@ async def get_stock_name(url) -> str | None:
     page = urlopen(req).read()
 
     soup = BeautifulSoup(page, "html.parser")
-    title = soup.find("title")
     if soup.title != None:
         return soup.title.string
 
