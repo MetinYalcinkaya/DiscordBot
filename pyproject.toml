@@ -9,6 +9,7 @@ dependencies = [
     "sqlalchemy<3.0.0,>=2.0.36",
     "beautifulsoup4>=4.12.3,<5.0.0",
     "pycord>=0.1.1",
+    "selenium>=4.27.1",
 ]
 name = "discordbot"
 version = "0.1.0"

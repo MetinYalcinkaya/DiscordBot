@@ -1,11 +1,12 @@
 import re
 from enum import Enum
 from typing import List
-from urllib.request import Request, urlopen
 
 import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 import db.utils as db
 from db.connect import Session
@@ -69,8 +70,9 @@ class Stock_Status(Enum):
 
 
 async def check_stock(url) -> int:
-    req = Request(url)
-    page = urlopen(req).read()
+    # req = await url_request(url)
+    # page = urlopen(req).read()
+    page = await url_request(url)
 
     soup = BeautifulSoup(page, "html.parser")
     out_of_stock_strings = ["sold out", "out of stock"]
@@ -93,13 +95,28 @@ async def check_stock(url) -> int:
 
 
 async def get_stock_name(url) -> str | None:
-    req = Request(url)
-    page = urlopen(req).read()
+    # req = await url_request(url)
+    # page = urlopen(req).read()
+    page = await url_request(url)
 
     soup = BeautifulSoup(page, "html.parser")
     if soup.title is not None:
         if soup.title.string is not None:
             return re.sub(r"\s[—-].*", "", soup.title.string).strip()
+
+
+async def url_request(url) -> str:
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    )
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.get(url)
+    html = driver.page_source
+    driver.quit()
+    return html
 
 
 def add_stock(user: discord.Member, url, stock_name):
