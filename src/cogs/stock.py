@@ -15,9 +15,14 @@ from db.models import User_Stock
 class Stock(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.prefix = "!stock"
 
-    @commands.command(name="add")
+    @commands.group(name="stock")
+    async def stock(self, ctx):
+        if ctx.invoked_subcommand is None:
+            subcommand_names = ", ".join([cmd.name for cmd in ctx.command.commands])
+            await ctx.send(f"Available subcommands: {subcommand_names}")
+
+    @stock.command(name="add")
     async def add_watching(self, ctx, url, name=None):
         # check if user is in db
         if db.get_user(ctx.author) is None:
@@ -41,7 +46,7 @@ class Stock(commands.Cog):
             await ctx.reply(f"[{name}](<{url}>)is already being watched!")
         await check_stock(url)
 
-    @commands.command(name="list")
+    @stock.command(name="list")
     async def list_watching(self, ctx):
         items = get_all_stocks(ctx.author)
         if not items:

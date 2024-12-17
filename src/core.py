@@ -8,20 +8,13 @@ from discord.ext import commands
 
 import config
 
-
-def get_prefixes(bot, message):
-    cog_prefixes = (cog.prefix for cog in bot.cogs.values() if hasattr(cog, "prefix"))
-    default_prefixes = "!"
-    return (*cog_prefixes, *default_prefixes)
-
-
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 bot = commands.Bot(
-    command_prefix=get_prefixes,
+    command_prefix=commands.when_mentioned_or("!"),
     intents=intents,
-    commands=commands.dm_only(),  # TODO: change this to not only be dms when ready
+    commands=commands.dm_only(),
 )
 
 cogs_list = ["stock", "coinflip"]
@@ -51,12 +44,6 @@ def handle_error(error: BaseException) -> None:
                 "--rate-limit-delay",
             ),
         )
-
-
-# @bot.command(name="add")
-# async def add_watching(ctx):
-#     await ctx.send("Added")
-#     print(f"hello, {ctx.author}")
 
 
 def _is_rate_limit(error: BaseException) -> bool:
