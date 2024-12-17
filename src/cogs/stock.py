@@ -5,8 +5,7 @@ from typing import List
 import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from playwright.async_api import async_playwright
 
 import db.utils as db
 from db.connect import Session
@@ -16,6 +15,7 @@ from db.models import User_Stock
 class Stock(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.prefix = "!stock"
 
     @commands.command(name="add")
     async def add_watching(self, ctx, url, name=None):
@@ -70,16 +70,18 @@ class Stock_Status(Enum):
 
 
 async def check_stock(url) -> int:
-    # req = await url_request(url)
-    # page = urlopen(req).read()
-    page = await url_request(url)
+    soup = await fetch_page_contents(url)
+    for hidden_element in soup.select("[style*='display:none'], [hidden]"):
+        hidden_element.decompose()
 
-    soup = BeautifulSoup(page, "html.parser")
     out_of_stock_strings = ["sold out", "out of stock"]
+    page_text = soup.get_text().lower()
     in_stock_bool = True
+
     for string in out_of_stock_strings:
-        if soup.get_text().lower().find(string) != -1:
+        if string in page_text:
             in_stock_bool = False
+            break
 
     if in_stock_bool:
         print("Product is in stock!")
@@ -94,29 +96,34 @@ async def check_stock(url) -> int:
     #     await asyncio.sleep(1)
 
 
-async def get_stock_name(url) -> str | None:
-    # req = await url_request(url)
-    # page = urlopen(req).read()
-    page = await url_request(url)
-
-    soup = BeautifulSoup(page, "html.parser")
+async def get_stock_name(url: str) -> str | None:
+    soup = await fetch_page_contents(url)
     if soup.title is not None:
         if soup.title.string is not None:
             return re.sub(r"\s[—-].*", "", soup.title.string).strip()
 
 
-async def url_request(url) -> str:
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-    )
-    driver = webdriver.Chrome(options=chrome_options)
-    driver.get(url)
-    html = driver.page_source
-    driver.quit()
-    return html
+async def fetch_page_contents(url: str) -> BeautifulSoup:
+    async with async_playwright() as pw:
+        # headless browser
+        browser = await pw.chromium.launch(headless=True)
+        page = await browser.new_page()
+        # user agent
+        await page.set_extra_http_headers(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/115.0.0.0 Safari/537.36"
+            }
+        )
+        await page.goto(url, wait_until="networkidle")
+        html = await page.content()
+        await browser.close()
+
+    soup = BeautifulSoup(html, "html.parser")
+    [s.extract() for s in soup(["style", "script", "[document]", "head"])]
+
+    return soup
 
 
 def add_stock(user: discord.Member, url, stock_name):
