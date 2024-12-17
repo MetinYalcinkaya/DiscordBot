@@ -12,7 +12,7 @@ Session = sessionmaker(bind=engine, expire_on_commit=False)
 def try_connect() -> None:
     try:
         with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+            _ = connection.execute(text("SELECT 1"))
             print("Connection established")
     except Exception:
         engine.dispose()

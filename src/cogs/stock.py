@@ -1,10 +1,15 @@
+import re
 from enum import Enum
+from typing import List
 from urllib.request import Request, urlopen
 
+import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
 import db.utils as db
+from db.connect import Session
+from db.models import User_Stock
 
 
 class Stock(commands.Cog):
@@ -12,42 +17,46 @@ class Stock(commands.Cog):
         self.bot = bot
 
     @commands.command(name="add")
-    async def add_watching(self, ctx, url):
+    async def add_watching(self, ctx, url, name=None):
         # check if user is in db
-        if db.get_user(ctx.author) == None:
+        if db.get_user(ctx.author) is None:
             print("User doesn't exist, adding to database")
             db.add_user(ctx.author)
         else:
             print("User already exists")
 
         # check if stock is in db for user
-        if db.get_stock(ctx.author, url) == None:
+        if get_stock(ctx.author, url) is None:
             print("Stock not watched, adding")
-            await ctx.send(f"Adding {url} to your watching!")
-            stock_name = await get_stock_name(url)
-            db.add_stock(ctx.author, url, stock_name)
+
+            if name is None:
+                name = await get_stock_name(url)
+
+            await ctx.reply(f"Adding [{name}](<{url}>) to your watchlist!")
+
+            add_stock(ctx.author, url, name)
         else:
             print("Stock already watched")
-            await ctx.send(f"{url} is already being watched!")
+            await ctx.reply(f"[{name}](<{url}>)is already being watched!")
         await check_stock(url)
 
     @commands.command(name="list")
     async def list_watching(self, ctx):
-        items = db.get_all_stocks(ctx.author)
+        items = get_all_stocks(ctx.author)
         if not items:
-            await ctx.send("You're not watching any items!")
+            await ctx.reply("You're not watching any items!")
             return
 
-        message = ""
-        if items != None:
-            for item in items:
+        message = "# Watched Items\n"
+        if items is not None:
+            for index, item in enumerate(items):
                 in_stock = (
                     "In stock"
                     if await check_stock(item.stock_url) == 1
                     else "Out of stock"
                 )
-                message += f"[{item.stock_name}]({item.stock_url}): Current stock: {in_stock}\n"
-        await ctx.send(message)
+                message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+        await ctx.reply(message)
 
 
 def setup(bot):
@@ -88,10 +97,27 @@ async def get_stock_name(url) -> str | None:
     page = urlopen(req).read()
 
     soup = BeautifulSoup(page, "html.parser")
-    if soup.title != None:
-        return soup.title.string
+    if soup.title is not None:
+        if soup.title.string is not None:
+            return re.sub(r"\s[—-].*", "", soup.title.string).strip()
 
 
-async def parse_stock_string(string: str) -> dict:
-    formatted_dict = dict(item.split("=") for item in string.split("|"))
-    return formatted_dict
+def add_stock(user: discord.Member, url, stock_name):
+    with Session() as session:
+        db_stock = User_Stock(user_id=user.id, stock_url=url, stock_name=stock_name)
+        session.add(db_stock)
+        session.commit()
+
+
+def get_stock(user: discord.Member, url) -> User_Stock | None:
+    with Session() as session:
+        return (
+            session.query(User_Stock)
+            .filter(User_Stock.user_id == user.id, User_Stock.stock_url == url)
+            .one_or_none()
+        )
+
+
+def get_all_stocks(user: discord.Member) -> List[User_Stock] | None:
+    with Session() as session:
+        return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()

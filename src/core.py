@@ -17,7 +17,7 @@ bot = commands.Bot(
     commands=commands.dm_only(),
 )
 
-cogs_list = ["stock"]
+cogs_list = ["stock", "coinflip"]
 
 for cog in cogs_list:
     bot.load_extension(f"cogs.{cog}")
