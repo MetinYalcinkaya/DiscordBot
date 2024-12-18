@@ -22,6 +22,8 @@ cogs_list = ["stock", "coinflip"]
 for cog in cogs_list:
     bot.load_extension(f"cogs.{cog}")
 
+# TODO: send message when given invalid command
+
 
 @bot.event
 async def on_ready():

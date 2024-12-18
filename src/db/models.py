@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Unicode, create_engine
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Integer, Unicode, create_engine
 from sqlalchemy.orm import declarative_base
 
 from config import DB_DIR
@@ -12,12 +14,12 @@ class User(Base):
     __tablename__ = "USER"
     user_id = Column(Unicode, primary_key=True)
     username = Column(Unicode, nullable=False)
+    join_date = Column(DateTime, default=datetime.today())
 
     def __repr__(self) -> str:
-        return f"user_id={self.user_id}|username={self.username}"
-
-    def __str__(self) -> str:
-        return f"ID: {self.user_id} Username: {self.username}"
+        return (
+            f"ID: {self.user_id} Username: {self.username} Join Date: {self.join_date}"
+        )
 
 
 class User_Stock(Base):
@@ -25,9 +27,10 @@ class User_Stock(Base):
     user_id = Column(Unicode, primary_key=True)
     stock_url = Column(Unicode, primary_key=True)
     stock_name = Column(Unicode, nullable=False)
+    stock_status = Column(Integer, nullable=False)
+    date_added = Column(Unicode, default=datetime.today())
+    last_checked = Column(DateTime, default=datetime.today())
+    check_interval = Column(Integer, default=300)  # Default 5 mins
 
     def __repr__(self) -> str:
-        return f"user_id={self.user_id}|stock_url={self.stock_url}|stock_name={self.stock_name}"
-
-    def __str__(self) -> str:
-        return f"ID: {self.user_id} URL: {self.stock_url} Name: {self.stock_name}"
+        return f"ID: {self.user_id} URL: {self.stock_url} Name: {self.stock_name} Date Added: {self.date_added} Interval: {self.check_interval}"
