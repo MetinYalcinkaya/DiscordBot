@@ -19,7 +19,7 @@ sql_tables = {
         stock_url VARCHAR(255) NOT NULL,
         stock_name VARCHAR(50) NOT NULL,
         stock_status INTEGER NOT NULL, /*Stock_Status enum, 0 oos, 1 in stock*/
-        added_date TIMESTAMP NOT NULL,
+        date_added TIMESTAMP NOT NULL,
         last_checked TIMESTAMP NOT NULL,
         check_interval INTEGER NOT NULL /*Seconds*/
     )""",

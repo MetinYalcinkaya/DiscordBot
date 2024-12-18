@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from enum import Enum
 from typing import List
 
@@ -6,10 +7,11 @@ import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from playwright.async_api import async_playwright
+from sqlalchemy import select
 
 import db.utils as db
 from db.connect import Session
-from db.models import User_Stock
+from db.models import User, User_Stock
 
 
 class Stock(commands.Cog):
@@ -40,11 +42,11 @@ class Stock(commands.Cog):
 
             await ctx.reply(f"Adding [{name}](<{url}>) to your watchlist!")
 
-            add_stock(ctx.author, url, name)
+            await add_stock(ctx.author, url, name)
         else:
             print("Stock already watched")
             await ctx.reply(f"[{name}](<{url}>)is already being watched!")
-        await check_stock(url)
+        # await check_stock(url)
 
     @stock.command(name="list")
     async def list_watching(self, ctx):
@@ -52,16 +54,17 @@ class Stock(commands.Cog):
         if not items:
             await ctx.reply("You're not watching any items!")
             return
-
+        # TODO: add timestamp checks
         message = "# Watched Items\n"
-        if items is not None:
-            for index, item in enumerate(items):
-                in_stock = (
-                    "In stock"
-                    if await check_stock(item.stock_url) == 1
-                    else "Out of stock"
-                )
-                message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+        for index, item in enumerate(items):
+            if (
+                datetime.now() - item.date_added
+            ).total_seconds() >= item.check_interval:
+                print("big wow time to check")
+            in_stock = (
+                "In stock" if await check_stock(item.stock_url) == 1 else "Out of stock"
+            )
+            message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
         await ctx.reply(message)
 
 
@@ -126,14 +129,27 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
         await browser.close()
 
     soup = BeautifulSoup(html, "html.parser")
-    [s.extract() for s in soup(["style", "script", "[document]", "head"])]
+    # [s.extract() for s in soup(["style", "script", "[document]", "head", "title"])]
 
     return soup
 
 
-def add_stock(user: discord.Member, url, stock_name):
+async def add_stock(user: discord.Member, url, stock_name):
+    stock_status = await check_stock(url)
+    date_added = datetime.now()
+    last_checked = datetime.now()
+    check_interval = 300
+
     with Session() as session:
-        db_stock = User_Stock(user_id=user.id, stock_url=url, stock_name=stock_name)
+        db_stock = User_Stock(
+            user_id=user.id,
+            stock_url=url,
+            stock_name=stock_name,
+            stock_status=stock_status,
+            date_added=date_added,
+            last_checked=last_checked,
+            check_interval=check_interval,
+        )
         session.add(db_stock)
         session.commit()
 
@@ -149,4 +165,9 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
 
 def get_all_stocks(user: discord.Member) -> List[User_Stock] | None:
     with Session() as session:
+        # if session.quers
+        # if session.query(User).filter(User.user_id == user.id).all() is None:
+        #     print("User isn't in the database")
+        #     db.add_user(user)
+        #     return None
         return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()

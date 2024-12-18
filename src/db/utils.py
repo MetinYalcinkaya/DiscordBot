@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import discord
 
 from db.connect import Session
@@ -7,7 +9,7 @@ from .models import User
 
 def add_user(user: discord.Member) -> User:
     with Session() as session:
-        db_user = User(user_id=user.id, username=user.name)
+        db_user = User(user_id=user.id, username=user.name, join_date=datetime.now())
         session.add(db_user)
         session.commit()
         return db_user

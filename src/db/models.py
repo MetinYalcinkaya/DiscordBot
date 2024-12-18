@@ -28,8 +28,8 @@ class User_Stock(Base):
     stock_url = Column(Unicode, primary_key=True)
     stock_name = Column(Unicode, nullable=False)
     stock_status = Column(Integer, nullable=False)
-    date_added = Column(Unicode, default=datetime.today())
-    last_checked = Column(DateTime, default=datetime.today())
+    date_added = Column(DateTime)
+    last_checked = Column(DateTime)
     check_interval = Column(Integer, default=300)  # Default 5 mins
 
     def __repr__(self) -> str:
