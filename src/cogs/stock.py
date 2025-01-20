@@ -9,6 +9,7 @@ from discord.ext import commands
 from playwright.async_api import async_playwright
 
 import db.utils as db
+from config import MY_USER_ID
 from db.connect import Session
 from db.models import User_Stock  # TODO: maybe import User
 
@@ -53,7 +54,7 @@ class Stock(commands.Cog):
         if not items:
             await ctx.reply("You're not watching any items!")
             return
-        message = "# Watched Items\n"
+        bot_message = await ctx.reply("# Watched Items\n")
         for index, item in enumerate(items):
             # Checks if enough time has passed
             time_passed = (datetime.now() - item.last_checked).total_seconds()
@@ -62,14 +63,28 @@ class Stock(commands.Cog):
                 print(f"Enough time has passed, checking {item.stock_url}")
                 stock_status = await check_stock(item.stock_url) == 1
                 in_stock = "In stock" if stock_status == 1 else "Out of stock"
-                message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+                bot_message = await bot_message.edit(
+                    content=bot_message.content + message
+                )
                 await update_last_checked(item)
                 await update_stock_status(item, stock_status)
             else:
                 print(f"Interval < time passed, using old status for {item.stock_url}")
                 in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
-                message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
-        await ctx.reply(message)
+                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+                bot_message = await bot_message.edit(
+                    content=bot_message.content + message
+                )
+
+    # functionality testing
+    @stock.command(name="test")
+    async def test(self, ctx):
+        if ctx.author.id == MY_USER_ID:
+            print("admin")
+            message = await ctx.reply("Testing")
+            print(message.id)
+            await message.edit(content="Editted!")
 
 
 def setup(bot):
