@@ -53,17 +53,21 @@ class Stock(commands.Cog):
         if not items:
             await ctx.reply("You're not watching any items!")
             return
-        # TODO: add timestamp checks
         message = "# Watched Items\n"
         for index, item in enumerate(items):
-            if (
-                datetime.now() - item.date_added
-            ).total_seconds() >= item.check_interval:
-                print("big wow time to check")
-            in_stock = (
-                "In stock" if await check_stock(item.stock_url) == 1 else "Out of stock"
-            )
-            message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+            # Checks if enough time has passed
+            time_passed = (datetime.now() - item.last_checked).total_seconds()
+            if time_passed >= item.check_interval:
+                print(f"Enough time has passed, checking {item.stock_url}")
+                stock_status = await check_stock(item.stock_url) == 1
+                in_stock = "In stock" if stock_status == 1 else "Out of stock"
+                message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+                await update_last_checked(item)
+                await update_stock_status(item, stock_status)
+            else:
+                print(f"Interval < time passed, using old status for {item.stock_url}")
+                in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
+                message += f"**{index+1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
         await ctx.reply(message)
 
 
@@ -164,9 +168,20 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
 
 def get_all_stocks(user: discord.Member) -> List[User_Stock] | None:
     with Session() as session:
-        # if session.quers
-        # if session.query(User).filter(User.user_id == user.id).all() is None:
-        #     print("User isn't in the database")
-        #     db.add_user(user)
-        #     return None
         return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
+
+
+async def update_last_checked(stock: User_Stock):
+    with Session() as session:
+        db_stock = session.merge(stock)
+        db_stock.last_checked = datetime.now()
+        session.commit()
+        print("Last checked updated")
+
+
+async def update_stock_status(stock: User_Stock, status: int):
+    with Session() as session:
+        db_stock = session.merge(stock)
+        db_stock.stock_status = status
+        session.commit()
+        print("Stock status updated")

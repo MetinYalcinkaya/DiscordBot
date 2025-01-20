@@ -3,12 +3,15 @@
 ## General
 
 - [ ] Install instructions
-  - Maybe Docker
+  - [ ] Docker?
 
 ## Stock Checker
 
+- [ ] Update message as stock is checked
 - [ ] Automated checking
 - [ ] Pricing tracker
+- [ ] Directly check if pre-order instead of saying in stock
+  - [ ] Add to enum
 
 ## Other
 
