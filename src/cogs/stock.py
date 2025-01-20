@@ -7,11 +7,10 @@ import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from playwright.async_api import async_playwright
-from sqlalchemy import select
 
 import db.utils as db
 from db.connect import Session
-from db.models import User, User_Stock
+from db.models import User_Stock  # TODO: maybe import User
 
 
 class Stock(commands.Cog):

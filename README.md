@@ -1,14 +1,20 @@
 # DiscordBot
 
-A simple Discord bot written in Python, using Pycord
+A simple Discord bot written in Python
+
+## Dependencies
+
+- PyCord; Discord API interaction
+- BeautifulSoup; scraping and parsing webpages
+- SQLAlchemy; SQLite database interaction
+- Playwright; headless browser for http requests
+- Dotenv; .env file functionality
+- Pytest; Unit testing
 
 ## Features
 
-- Stock checker
+### Stock Checker
 
-## TODO
-
-- Coin flip
-- Dice roll
-- Wheel of fortune?
-  - Multiple options, removes previous when landed
+Stores users website links and checks state to see if the item is in stock. If
+the item isn't in stock, it will intermittently (Deciding proper interval;
+currently 5 mins/300 seconds) check if the state of it is changed.

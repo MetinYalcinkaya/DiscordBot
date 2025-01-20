@@ -33,4 +33,4 @@ class User_Stock(Base):
     check_interval = Column(Integer, default=300)  # Default 5 mins
 
     def __repr__(self) -> str:
-        return f"ID: {self.user_id} URL: {self.stock_url} Name: {self.stock_name} Date Added: {self.date_added} Interval: {self.check_interval}"
+        return f"ID: {self.user_id} URL: {self.stock_url} Name: {self.stock_name} Status: {self.stock_status} Date Added: {self.date_added} Last Checked: {self.last_checked} Interval: {self.check_interval}"
