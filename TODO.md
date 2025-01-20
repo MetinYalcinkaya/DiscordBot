@@ -7,7 +7,7 @@
 
 ## Stock Checker
 
-- [ ] Update message as stock is checked
+- [x] Update message as stock is checked
 - [ ] Automated checking
 - [ ] Pricing tracker
 - [ ] Directly check if pre-order instead of saying in stock
