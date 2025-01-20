@@ -57,6 +57,7 @@ class Stock(commands.Cog):
         for index, item in enumerate(items):
             # Checks if enough time has passed
             time_passed = (datetime.now() - item.last_checked).total_seconds()
+            print(f"time passed: {time_passed}")
             if time_passed >= item.check_interval:
                 print(f"Enough time has passed, checking {item.stock_url}")
                 stock_status = await check_stock(item.stock_url) == 1
@@ -173,15 +174,18 @@ def get_all_stocks(user: discord.Member) -> List[User_Stock] | None:
 
 async def update_last_checked(stock: User_Stock):
     with Session() as session:
-        db_stock = session.merge(stock)
+        print(f"initial last checked: {stock.last_checked}")
+        db_stock = stock
         db_stock.last_checked = datetime.now()
+        session.add(db_stock)
         session.commit()
         print("Last checked updated")
 
 
 async def update_stock_status(stock: User_Stock, status: int):
     with Session() as session:
-        db_stock = session.merge(stock)
+        db_stock = stock
         db_stock.stock_status = status
+        session.add(db_stock)
         session.commit()
         print("Stock status updated")
