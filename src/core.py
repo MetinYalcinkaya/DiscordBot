@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 import config
+from cogs.stock import auto_check_stock
 
 intents = discord.Intents.default()
 intents.members = True
@@ -28,6 +29,8 @@ for cog in cogs_list:
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
+    # create task for auto checking stock
+    bot.loop.create_task(auto_check_stock(bot))
 
 
 @bot.event

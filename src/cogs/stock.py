@@ -58,6 +58,7 @@ class Stock(commands.Cog):
         bot_message = await ctx.reply("# Watched Items\n")
         for index, item in enumerate(items):
             # Checks if enough time has passed
+            # TODO: remove checking logic here
             time_passed = (datetime.now() - item.last_checked).total_seconds()
             print(f"time passed: {time_passed}")
             if time_passed >= item.check_interval:
@@ -85,8 +86,11 @@ class Stock(commands.Cog):
         if ctx.author.id == MY_USER_ID:
             print(f"Authorised user: {ctx.author.name} - ID: {ctx.author.id}")
             print("\n\n\n--------------- Testing ---------------\n\n\n")
-            await auto_check_stock()
-            print("Continuing")
+            user = self.bot.get_user(MY_USER_ID)
+            if user is None:
+                user = await self.bot.fetch_user(MY_USER_ID)
+            print(f"Found user: {user} (ID: {user.id})")
+            await user.send("Hello")
 
 
 def setup(bot):
@@ -98,14 +102,34 @@ class Stock_Status(Enum):
     IN_STOCK = 1
 
 
-async def auto_check_stock():
-    print("auto check starting")
-    active = True
-    while active:
-        all_stocks = get_all_watched()
+async def auto_check_stock(bot, interval: int = 60):
+    print("Executing automatic stock checking")
+    while True:
+        # TODO: check for duplicate url's and filter them
+        all_stocks = await get_all_watched()
         for stock in all_stocks:
-            print(stock)
-        active = False
+            # try get user from cache, otherwise fetch directly
+            user = bot.get_user(stock.user_id)
+            if user is None:
+                user = await bot.fetch_user(stock.user_id)
+
+            print(f"Checking stock {stock.stock_url}")
+
+            time_passed = (datetime.now() - stock.last_checked).total_seconds()
+            if time_passed >= stock.check_interval:
+                stock_status = await check_stock(stock.stock_url) == 1
+                await update_last_checked(stock)
+                await update_stock_status(stock, stock_status)
+                if stock_status != stock.stock_status:
+                    in_stock_message = (
+                        "In stock" if stock_status == 1 else "Out of stock"
+                    )
+                    message = f"{stock.stock_name} is now **{in_stock_message}**!"
+                    await user.send(message)
+
+            else:
+                print(f"No need to check {stock.stock_url}")
+        await asyncio.sleep(interval)
 
 
 async def check_stock(url) -> int:
@@ -194,7 +218,8 @@ def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
         return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
 
 
-def get_all_watched() -> List[User_Stock] | None:
+# All watched stock regardless of user
+async def get_all_watched() -> List[User_Stock] | None:
     with Session() as session:
         return session.query(User_Stock).filter().all()
 
