@@ -1,3 +1,4 @@
+import asyncio
 import re
 from datetime import datetime
 from enum import Enum
@@ -50,7 +51,7 @@ class Stock(commands.Cog):
 
     @stock.command(name="list")
     async def list_watching(self, ctx):
-        items = get_all_stocks(ctx.author)
+        items = get_users_watched(ctx.author)
         if not items:
             await ctx.reply("You're not watching any items!")
             return
@@ -80,11 +81,12 @@ class Stock(commands.Cog):
     # functionality testing
     @stock.command(name="test")
     async def test(self, ctx):
+        print("Attempting to execute test function")
         if ctx.author.id == MY_USER_ID:
-            print("admin")
-            message = await ctx.reply("Testing")
-            print(message.id)
-            await message.edit(content="Editted!")
+            print(f"Authorised user: {ctx.author.name} - ID: {ctx.author.id}")
+            print("\n\n\n--------------- Testing ---------------\n\n\n")
+            await auto_check_stock()
+            print("Continuing")
 
 
 def setup(bot):
@@ -94,6 +96,16 @@ def setup(bot):
 class Stock_Status(Enum):
     OUT_OF_STOCK = 0
     IN_STOCK = 1
+
+
+async def auto_check_stock():
+    print("auto check starting")
+    active = True
+    while active:
+        all_stocks = get_all_watched()
+        for stock in all_stocks:
+            print(stock)
+        active = False
 
 
 async def check_stock(url) -> int:
@@ -116,11 +128,6 @@ async def check_stock(url) -> int:
     else:
         print("Product is out of stock")
         return Stock_Status.OUT_OF_STOCK.value
-
-    # start = time.time()
-    # while True:
-    #     print(f"Time: {time.time() - start:.2f}")
-    #     await asyncio.sleep(1)
 
 
 async def get_stock_name(url: str) -> str | None:
@@ -182,9 +189,14 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
         )
 
 
-def get_all_stocks(user: discord.Member) -> List[User_Stock] | None:
+def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
     with Session() as session:
         return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
+
+
+def get_all_watched() -> List[User_Stock] | None:
+    with Session() as session:
+        return session.query(User_Stock).filter().all()
 
 
 async def update_last_checked(stock: User_Stock):
