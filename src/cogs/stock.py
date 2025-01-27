@@ -125,6 +125,7 @@ async def auto_check_stock(bot, interval: int = 60):
             time_passed = (datetime.now() - stock.last_checked).total_seconds()
             if time_passed >= stock.check_interval:
                 stock_status = await check_stock(stock.stock_url) == 1
+                price = await get_stock_price(stock.url)
                 await update_last_checked(stock)
                 await update_stock_status(stock, stock_status)
                 if stock_status != stock.stock_status:
@@ -132,6 +133,11 @@ async def auto_check_stock(bot, interval: int = 60):
                         "In stock" if stock_status == 1 else "Out of stock"
                     )
                     message = f"{stock.stock_name} is now **{in_stock_message}**!"
+                    await user.send(message)
+                if price != stock.price:
+                    message = (
+                        f"{stock.stock_name} price change: {stock.price} -> {price}"
+                    )
                     await user.send(message)
 
             else:
