@@ -4,20 +4,20 @@ A simple Discord bot written in Python
 
 ## Dependencies
 
-- PyCord; Discord API interaction
-- BeautifulSoup; scraping and parsing webpages
-- SQLAlchemy; SQLite database interaction
-- Playwright; headless browser for http requests
-- Dotenv; .env file functionality
-- Pytest; Unit testing
+- [PyCord](https://github.com/Pycord-Development/pycord); Discord API interaction
+- [BeautifulSoup](https://code.launchpad.net/beautifulsoup); scraping and parsing webpages
+- [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy); SQLite database interaction
+- [Playwright](https://github.com/microsoft/playwright-python); headless browser for http requests
+- [Dotenv](https://github.com/theskumar/python-dotenv); .env file functionality
+- [Pytest](https://github.com/pytest-dev/pytest); Unit testing
 
 ## Features
 
 ### Stock Checker
 
-Stores users website links and checks state to see if the item is in stock. If
-the item isn't in stock, it will intermittently (Deciding proper interval;
-currently 5 mins/300 seconds) check if the state of it is changed.
+Watches user added links of products to see the price and stock status of it. If
+the price or stock status changes, it will direct message the user of the
+changes.
 
 ## TODO
 
@@ -31,8 +31,6 @@ currently 5 mins/300 seconds) check if the state of it is changed.
 - [x] Update message as stock is checked #17fb574
 - [x] Automated checking #07be7c6
 - [x] Pricing tracker #fe1e985
-- [ ] Directly check if pre-order instead of saying in stock
-  - [ ] Add to enum
 
 ### Other
 
