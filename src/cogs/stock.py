@@ -67,27 +67,9 @@ class Stock(commands.Cog):
             return
         bot_message = await ctx.reply("# Watched Items\n")
         for index, item in enumerate(items):
-            # Checks if enough time has passed
-            # TODO: remove checking logic here, just return list
-            time_passed = (datetime.now() - item.last_checked).total_seconds()
-            print(f"time passed: {time_passed}")
-            if time_passed >= item.check_interval:
-                print(f"Enough time has passed, checking {item.stock_url}")
-                stock_status = await check_stock(item.stock_url) == 1
-                in_stock = "In stock" if stock_status == 1 else "Out of stock"
-                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** _{item.price}_\n"
-                bot_message = await bot_message.edit(
-                    content=bot_message.content + message
-                )
-                await update_last_checked(item)
-                await update_stock_status(item, stock_status)
-            else:
-                print(f"Interval < time passed, using old status for {item.stock_url}")
-                in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
-                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** _{item.price}_\n"
-                bot_message = await bot_message.edit(
-                    content=bot_message.content + message
-                )
+            in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
+            message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** **{item.price}**\n"
+            bot_message = await bot_message.edit(content=bot_message.content + message)
 
     # functionality testing
     @stock.command(name="test")
