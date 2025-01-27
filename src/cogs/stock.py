@@ -14,6 +14,16 @@ from config import MY_USER_ID
 from db.connect import Session
 from db.models import User_Stock  # TODO: maybe import User
 
+CURRENCY_SYMBOLS = {
+    "$": "prefix",
+    "£": "prefix",
+    "¥": "prefix",
+    "₹": "prefix",
+    "€": "suffix",
+    "kr": "suffix",
+    "zł": "suffix",
+}
+
 
 class Stock(commands.Cog):
     def __init__(self, bot):
@@ -58,14 +68,14 @@ class Stock(commands.Cog):
         bot_message = await ctx.reply("# Watched Items\n")
         for index, item in enumerate(items):
             # Checks if enough time has passed
-            # TODO: remove checking logic here
+            # TODO: remove checking logic here, just return list
             time_passed = (datetime.now() - item.last_checked).total_seconds()
             print(f"time passed: {time_passed}")
             if time_passed >= item.check_interval:
                 print(f"Enough time has passed, checking {item.stock_url}")
                 stock_status = await check_stock(item.stock_url) == 1
                 in_stock = "In stock" if stock_status == 1 else "Out of stock"
-                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** _{item.price}_\n"
                 bot_message = await bot_message.edit(
                     content=bot_message.content + message
                 )
@@ -74,7 +84,7 @@ class Stock(commands.Cog):
             else:
                 print(f"Interval < time passed, using old status for {item.stock_url}")
                 in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
-                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}**\n"
+                message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** _{item.price}_\n"
                 bot_message = await bot_message.edit(
                     content=bot_message.content + message
                 )
@@ -86,11 +96,26 @@ class Stock(commands.Cog):
         if ctx.author.id == MY_USER_ID:
             print(f"Authorised user: {ctx.author.name} - ID: {ctx.author.id}")
             print("\n\n\n--------------- Testing ---------------\n\n\n")
-            user = self.bot.get_user(MY_USER_ID)
-            if user is None:
-                user = await self.bot.fetch_user(MY_USER_ID)
-            print(f"Found user: {user} (ID: {user.id})")
-            await user.send("Hello")
+            # soup = await fetch_page_contents(
+            #     "https://supernote.au/shop/p/supernote-manta"
+            # )
+            soup = await fetch_page_contents("https://kriticalpads.com/evga-3080-ftw3")
+
+            # Regex to find price regardless of if it's a prefix or suffix
+            price_regex = re.compile(
+                r"(?:"
+                r"(?:[\$\£\¥\₹]\s?\d+(?:[.,]\d+)?)"  # e.g. $9.99, ¥ 1000, ₹50, etc.
+                r"|"
+                r"(?:\d+(?:[.,]\d+)?\s?(?:€|kr|zł))"  # e.g. 9.99€, 1000 kr, 50zł, etc.
+                r")",
+                re.IGNORECASE,
+            )
+            potential_prices = soup.find_all(
+                lambda tag: tag.string and re.search(price_regex, tag.string)
+            )
+            if potential_prices:
+                price_text = potential_prices[0].get_text(strip=True)
+                print(price_text)
 
 
 def setup(bot):
@@ -189,6 +214,7 @@ async def add_stock(user: discord.Member, url, stock_name):
     date_added = datetime.now()
     last_checked = datetime.now()
     check_interval = 300
+    price = await get_stock_price(url)
 
     with Session() as session:
         db_stock = User_Stock(
@@ -199,6 +225,7 @@ async def add_stock(user: discord.Member, url, stock_name):
             date_added=date_added,
             last_checked=last_checked,
             check_interval=check_interval,
+            price=price,
         )
         session.add(db_stock)
         session.commit()
@@ -211,6 +238,27 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
             .filter(User_Stock.user_id == user.id, User_Stock.stock_url == url)
             .one_or_none()
         )
+
+
+async def get_stock_price(url) -> str:
+    soup = await fetch_page_contents(url)
+
+    # Regex to find price regardless of if it's a prefix or suffix
+    price_regex = re.compile(
+        r"(?:"
+        r"(?:[\$\£\¥\₹]\s?\d+(?:[.,]\d+)?)"  # e.g. $9.99, ¥ 1000, ₹50, etc.
+        r"|"
+        r"(?:\d+(?:[.,]\d+)?\s?(?:€|kr|zł))"  # e.g. 9.99€, 1000 kr, 50zł, etc.
+        r")",
+        re.IGNORECASE,
+    )
+    potential_prices = soup.find_all(
+        lambda tag: tag.string and re.search(price_regex, tag.string)
+    )
+    if potential_prices:
+        price_text = potential_prices[0].get_text(strip=True)
+        # print(price_text)
+        return price_text
 
 
 def get_users_watched(user: discord.Member) -> List[User_Stock] | None:

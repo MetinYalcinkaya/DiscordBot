@@ -21,7 +21,8 @@ sql_tables = {
         stock_status INTEGER NOT NULL, /*Stock_Status enum, 0 oos, 1 in stock*/
         date_added TIMESTAMP NOT NULL,
         last_checked TIMESTAMP NOT NULL,
-        check_interval INTEGER NOT NULL /*Seconds*/
+        check_interval INTEGER NOT NULL, /*Seconds*/
+        price VARCHAR(50) NOT NULL
     )""",
 }
 

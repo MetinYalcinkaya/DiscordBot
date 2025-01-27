@@ -28,9 +28,10 @@ class User_Stock(Base):
     stock_url = Column(Unicode, primary_key=True)
     stock_name = Column(Unicode, nullable=False)
     stock_status = Column(Integer, nullable=False)
-    date_added = Column(DateTime)
-    last_checked = Column(DateTime)
+    date_added = Column(DateTime, nullable=False)
+    last_checked = Column(DateTime, nullable=False)
     check_interval = Column(Integer, default=300)  # Default 5 mins
+    price = Column(Unicode, nullable=False)
 
     def __repr__(self) -> str:
-        return f"ID: {self.user_id} URL: {self.stock_url} Name: {self.stock_name} Status: {self.stock_status} Date Added: {self.date_added} Last Checked: {self.last_checked} Interval: {self.check_interval}"
+        return f"ID: {self.user_id} URL: {self.stock_url} Name: {self.stock_name} Status: {self.stock_status} Date Added: {self.date_added} Last Checked: {self.last_checked} Interval: {self.check_interval} Price: {self.price}"
