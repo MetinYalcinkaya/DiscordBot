@@ -32,8 +32,10 @@ class Stock(commands.Cog):
     @commands.group(name="stock")
     async def stock(self, ctx):
         if ctx.invoked_subcommand is None:
-            subcommand_names = ", ".join([cmd.name for cmd in ctx.command.commands])
-            await ctx.send(f"Available subcommands: {subcommand_names}")
+            subcommand_names = ", ".join(
+                [cmd.name for cmd in ctx.command.commands if cmd.name != "test"]
+            )
+            await ctx.reply(f"Available subcommands: **{subcommand_names}**")
 
     @stock.command(name="add")
     async def add_watching(self, ctx, url, name=None):
@@ -77,7 +79,7 @@ class Stock(commands.Cog):
         print("Attempting to execute test function")
         if ctx.author.id == MY_USER_ID:
             print(f"Authorised user: {ctx.author.name} - ID: {ctx.author.id}")
-            print("\n\n\n--------------- Testing ---------------\n\n\n")
+            print("\n\n--------------- Testing ---------------\n\n")
             # soup = await fetch_page_contents(
             #     "https://supernote.au/shop/p/supernote-manta"
             # )
@@ -99,9 +101,16 @@ class Stock(commands.Cog):
                 price_text = potential_prices[0].get_text(strip=True)
                 print(price_text)
 
+    @commands.Cog.listener()
+    async def on_application_command_error(self, ctx, error):
+        if isinstance(error, commands.NotOwner):
+            await ctx.respond("You don't have permission to use that command")
+        else:
+            raise error  # raises the other errors
 
-def setup(bot):
-    bot.add_cog(Stock(bot))
+
+async def setup(bot):
+    await bot.add_cog(Stock(bot))
 
 
 class Stock_Status(Enum):
