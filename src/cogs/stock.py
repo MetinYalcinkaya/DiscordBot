@@ -125,7 +125,7 @@ async def auto_check_stock(bot, interval: int = 60):
             time_passed = (datetime.now() - stock.last_checked).total_seconds()
             if time_passed >= stock.check_interval:
                 stock_status = await check_stock(stock.stock_url) == 1
-                price = await get_stock_price(stock.url)
+                price = await get_stock_price(stock.stock_url)
                 await update_last_checked(stock)
                 await update_stock_status(stock, stock_status)
                 if stock_status != stock.stock_status:
