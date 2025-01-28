@@ -9,7 +9,6 @@ A simple Discord bot written in Python, packaged with [uv](https://github.com/as
 - [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy); SQLite database interaction
 - [Playwright](https://github.com/microsoft/playwright-python); headless browser for http requests
 - [Dotenv](https://github.com/theskumar/python-dotenv); .env file functionality
-- [Pytest](https://github.com/pytest-dev/pytest); Unit testing
 
 ## Features
 
