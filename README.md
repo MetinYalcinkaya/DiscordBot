@@ -29,6 +29,10 @@ WIP
 - [ ] Install instructions
   - [ ] Docker?
 
+### Core
+
+- [ ] Traverse cogs dir to load cogs rather than hard coding
+
 ### Stock Checker
 
 - [x] Update message as stock is checked #17fb574

@@ -35,6 +35,7 @@ class Cheeky(commands.Bot):
         self.loop.create_task(auto_check_stock(self))
 
     async def load_cogs(self) -> None:
+        # TODO: rather than hard coding, traverse cogs dir to get cogs
         cogs = cogs_list
         for cog in cogs:
             self.load_extension(f"cogs.{cog}")
