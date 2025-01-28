@@ -28,6 +28,7 @@ WIP
 
 - [ ] Install instructions
   - [ ] Docker?
+- [ ] CLI interactable
 
 ### Core
 
