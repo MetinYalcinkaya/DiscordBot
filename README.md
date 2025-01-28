@@ -4,7 +4,7 @@ A simple Discord bot written in Python, packaged with [uv](https://github.com/as
 
 ## Dependencies
 
-- [PyCord](https://github.com/Pycord-Development/pycord); Discord API interaction
+- [Discord.py](https://github.com/Rapptz/discord.py); Discord API interaction
 - [BeautifulSoup](https://code.launchpad.net/beautifulsoup); scraping and parsing webpages
 - [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy); SQLite database interaction
 - [Playwright](https://github.com/microsoft/playwright-python); headless browser for http requests
@@ -28,7 +28,7 @@ WIP
 
 - [ ] Install instructions
   - [ ] Docker?
-- [ ] CLI interactable
+- [ ] CLI interactivity
 
 ### Core
 
@@ -40,9 +40,13 @@ WIP
 - [x] Automated checking #07be7c6
 - [x] Pricing tracker #fe1e985
 
-### Other
+### Flip/Roll/RNG
 
+- [ ] Find better name and group together
+  - RNG seems to be good
 - [ ] Coin flip
 - [ ] Dice roll
 - [ ] Wheel of fortune?
   - Multiple options, removes previous when landed
+
+### Other

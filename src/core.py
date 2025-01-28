@@ -15,12 +15,13 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
-cogs_list = ["stock", "coinflip"]
+cogs_list = ["stock", "rng"]
 
 
 class Cheeky(commands.Bot):
     def __init__(self) -> None:
         super().__init__(
+            # TODO: move from dm_only() when ready
             command_prefix=commands.when_mentioned_or("!"),
             intents=intents,
             commands=commands.dm_only(),
@@ -38,7 +39,7 @@ class Cheeky(commands.Bot):
         # TODO: rather than hard coding, traverse cogs dir to get cogs
         cogs = cogs_list
         for cog in cogs:
-            self.load_extension(f"cogs.{cog}")
+            await self.load_extension(f"cogs.{cog}")
 
     async def on_error(*_: object) -> None:
         handle_error(cast(BaseException, sys.exc_info()[1]))
@@ -61,7 +62,7 @@ def handle_error(error: BaseException) -> None:
 
 
 def _is_rate_limit(error: BaseException) -> bool:
-    if isinstance(error, discord.ApplicationCommandInvokeError):
+    if isinstance(error, discord.app_commands.CommandInvokeError):
         error = error.original
     return isinstance(error, discord.HTTPException) and error.status == 429
 
