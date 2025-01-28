@@ -1,3 +1,3 @@
-from cogs import coinflip, stock
+from cogs import rng, stock
 
-__all__ = "stock", "coinflip"
+__all__ = "stock", "rng"
