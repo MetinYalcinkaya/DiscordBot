@@ -1,5 +1,4 @@
-from core import bot, config
-from db.connect import try_connect
+from core import run_bot
 
-try_connect()
-bot.run(config.BOT_TOKEN)
+if __name__ == "__main__":
+    run_bot()
