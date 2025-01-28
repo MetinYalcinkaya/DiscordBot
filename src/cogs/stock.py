@@ -262,7 +262,6 @@ async def get_all_watched() -> List[User_Stock] | None:
 
 async def update_last_checked(stock: User_Stock):
     with Session() as session:
-        print(f"initial last checked: {stock.last_checked}")
         db_stock = stock
         db_stock.last_checked = datetime.now()
         session.add(db_stock)

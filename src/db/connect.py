@@ -13,10 +13,10 @@ def try_connect() -> None:
     try:
         with engine.connect() as connection:
             _ = connection.execute(text("SELECT 1"))
-            print("Connection established")
+            print("Database connection established")
     except Exception:
         engine.dispose()
         raise RuntimeError("Failed to connect")
 
 
-try_connect()
+# try_connect()
