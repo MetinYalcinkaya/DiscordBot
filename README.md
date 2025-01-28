@@ -1,6 +1,6 @@
 # DiscordBot
 
-A simple Discord bot written in Python
+A simple Discord bot written in Python, packaged with [uv](https://github.com/astral-sh/uv)
 
 ## Dependencies
 
@@ -18,6 +18,10 @@ A simple Discord bot written in Python
 Watches user added links of products to see the price and stock status of it. If
 the price or stock status changes, it will direct message the user of the
 changes.
+
+## Installation
+
+WIP
 
 ## TODO
 
