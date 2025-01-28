@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import sys
 from pathlib import Path
@@ -16,6 +17,8 @@ intents.members = True
 intents.message_content = True
 
 cogs_list = ["stock", "rng"]
+
+handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
 
 
 class Cheeky(commands.Bot):
@@ -71,7 +74,9 @@ def run_bot():
     bot = Cheeky()
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(bot.start(config.BOT_TOKEN))
+        loop.run_until_complete(
+            bot.run(config.BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)
+        )
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt. Shutting down...")
     finally:
