@@ -33,6 +33,7 @@ WIP
 ### Core
 
 - [ ] Traverse cogs dir to load cogs rather than hard coding
+- [ ] Rewrite ! prefix to use [app_commands/trees](https://discordpy.readthedocs.io/en/stable/interactions/api.html#appcommand)
 
 ### Stock Checker
 
