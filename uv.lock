@@ -95,6 +95,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "discord-py" },
     { name = "playwright" },
+    { name = "price-parser" },
     { name = "python-dotenv" },
     { name = "sqlalchemy" },
 ]
@@ -104,6 +105,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12.3,<5.0.0" },
     { name = "discord-py", specifier = ">=2.4.0" },
     { name = "playwright", specifier = ">=1.49.1" },
+    { name = "price-parser", specifier = ">=0.3.4" },
     { name = "python-dotenv", specifier = ">=1.0.1,<2.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.36,<3.0.0" },
 ]
@@ -198,6 +200,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/52/95efac704bf36b770a2522d88a6dee298042845d10bfb35f7ca0fcc36d91/playwright-1.49.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cd9bc8dab37aa25198a01f555f0a2e2c3813fe200fef018ac34dfe86b34994b9", size = 43744353 },
     { url = "https://files.pythonhosted.org/packages/f9/97/a3fccc9aaa6da83890772e9980703b0ea6b1e1ad42042fb50df3aef6c641/playwright-1.49.1-py3-none-win32.whl", hash = "sha256:43b304be67f096058e587dac453ece550eff87b8fbed28de30f4f022cc1745bb", size = 34060663 },
     { url = "https://files.pythonhosted.org/packages/71/a9/bd88ac0bd498c91aab3aba2e393d1fa59f72a7243e9265ccbf4861ca4f64/playwright-1.49.1-py3-none-win_amd64.whl", hash = "sha256:47b23cb346283278f5b4d1e1990bcb6d6302f80c0aa0ca93dd0601a1400191df", size = 34060667 },
+]
+
+[[package]]
+name = "price-parser"
+version = "0.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/16/05/f88c4ff27b944de34d96e57e723f9b44ed9c3d53e0c881f403000487093f/price-parser-0.3.4.tar.gz", hash = "sha256:8a286caa40fe28912f5e596bf09d72e085f80c4b2acaf5dd22aab8298e6ba731", size = 32589 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/3e/fd9f039dc9da081b96cf266949590619ddaf919caf67fef3cd46e907f5d5/price_parser-0.3.4-py2.py3-none-any.whl", hash = "sha256:99c89bd5b3e40ae0826dd1bec8392a82edab49d05b5add80d545c82fc8bd1633", size = 15230 },
 ]
 
 [[package]]
