@@ -1,20 +1,24 @@
 import asyncio
+import json
 import re
 from datetime import datetime
 from enum import Enum
+from functools import lru_cache
 from typing import List
 
 import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from playwright.async_api import async_playwright
+from price_parser import Price
 
 import db.utils as db
 from config import MY_USER_ID
 from db.connect import Session
 from db.models import User_Stock  # TODO: maybe import User
 
-CURRENCY_SYMBOLS = {
+SYMBOL_INFO = {
+    # Symbols and their positioning
     "$": "prefix",
     "£": "prefix",
     "¥": "prefix",
@@ -22,6 +26,30 @@ CURRENCY_SYMBOLS = {
     "€": "suffix",
     "kr": "suffix",
     "zł": "suffix",
+    "₩": "prefix",
+    "₺": "prefix",
+    "₪": "prefix",
+    "Ft": "suffix",
+    "Kč": "suffix",
+    "₽": "suffix",
+}
+
+ISO_TO_SYMBOL = {
+    # ISO codes to symbols
+    "USD": "$",
+    "AUD": "$",
+    "CAD": "$",
+    "GBP": "£",
+    "JPY": "¥",
+    "INR": "₹",
+    "EUR": "€",
+    "SEK": "kr",
+    "NOK": "kr",
+    "DKK": "kr",
+    "PLN": "zł",
+    "CZK": "Kč",
+    "HUF": "Ft",
+    "RUB": "₽",
 }
 
 
@@ -144,9 +172,8 @@ async def auto_check_stock(bot, interval: int = 60):
                     message = f"{stock.stock_name} is now **{in_stock_message}**!"
                     await user.send(message)
                 if price != stock.price:
-                    message = (
-                        f"{stock.stock_name} price change: {stock.price} -> {price}"
-                    )
+                    message = f"[{stock.stock_name}](<{stock.stock_url}>) price change: {stock.price} -> {price}"
+                    await update_stock_price(stock, price)
                     await user.send(message)
 
             else:
@@ -156,6 +183,7 @@ async def auto_check_stock(bot, interval: int = 60):
 
 async def check_stock(url) -> int:
     soup = await fetch_page_contents(url)
+
     for hidden_element in soup.select("[style*='display:none'], [hidden]"):
         hidden_element.decompose()
 
@@ -196,7 +224,10 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
                 "Chrome/115.0.0.0 Safari/537.36"
             }
         )
-        await page.goto(url, wait_until="networkidle")
+        try:
+            await page.goto(url, wait_until="networkidle")
+        except Exception as e:
+            print(f"Error navigating to webpage {url}: {e}")
         html = await page.content()
         await browser.close()
 
@@ -237,25 +268,93 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
         )
 
 
+@lru_cache(maxsize=100)
 async def get_stock_price(url) -> str:
     soup = await fetch_page_contents(url)
 
-    # Regex to find price regardless of if it's a prefix or suffix
+    # helper function to format currency
+    def format_price(currency_code, price) -> str:
+        symbol = ISO_TO_SYMBOL.get(currency_code, currency_code)
+        position = SYMBOL_INFO.get(symbol, "prefix")
+        return f"{symbol}{price}" if position == "prefix" else f"{price}{symbol}"
+
+    # check schema.org meta tags
+    price_meta = soup.find("meta", itemprop="price")
+    currency_meta = soup.find("meta", itemprop="priceCurrency")
+    if price_meta and currency_meta:
+        return format_price(currency_meta["content"], price_meta["content"])
+
+    # check opengraph meta tags
+    price_og = soup.find("meta", property="product:price:amount")
+    currency_og = soup.find("meta", property="product:price:currency")
+    if price_og and currency_og:
+        return format_price(currency_og["content"], price_og["content"])
+
+    # check json-ld data
+    json_data = _extract_price_from_json_ld(soup)
+    if json_data and "price" in json_data and "currency" in json_data:
+        return format_price(json_data["currency"], json_data["price"])
+
+    # common elements by class name
+    price_classes = re.compile(
+        r"price|product-price|amount|product__price", re.IGNORECASE
+    )
+    price_element = soup.find_all(class_=price_classes)
+    for element in price_element:
+        parsed_price = _parse_price_string(element.get_text(strip=True))
+        if parsed_price:
+            print(f"Found common elements for {url}")
+            return parsed_price
+
+    # fallback to parsing entire page text
+    page_text = soup.get_text()
+    parsed_price = _parse_price_string(page_text)
+    if parsed_price:
+        print(f"Fallback to parse entire page for {url}")
+        return parsed_price
+
+    # regex fallback
     price_regex = re.compile(
-        r"(?:"
-        r"(?:[\$\£\¥\₹]\s?\d+(?:[.,]\d+)?)"  # e.g. $9.99, ¥ 1000, ₹50, etc.
-        r"|"
-        r"(?:\d+(?:[.,]\d+)?\s?(?:€|kr|zł))"  # e.g. 9.99€, 1000 kr, 50zł, etc.
-        r")",
-        re.IGNORECASE,
+        r"(?:[\$\£\¥\₹]\s?\d+[\d.,]*)|(?:\d+[\d.,]*\s?[€]|kr|zł)", re.IGNORECASE
     )
-    potential_prices = soup.find_all(
-        lambda tag: tag.string and re.search(price_regex, tag.string)
-    )
-    if potential_prices:
-        price_text = potential_prices[0].get_text(strip=True)
-        # print(price_text)
-        return price_text
+    potential_prices = soup.find_all(string=price_regex)
+    for text in potential_prices:
+        parsed_price = _parse_price_string(text.strip())
+        if parsed_price:
+            print(f"Fallback to regex for {url}")
+            return parsed_price
+
+    return "Price not found"
+
+
+def _parse_price_string(text) -> str | None:
+    # parses given text with price_parser
+    price = Price.fromstring(text)
+    if price and price.amount_float:
+        currency = price.currency.strip()
+        amount = price.amount_text
+
+        symbol = ISO_TO_SYMBOL.get(currency, currency)
+        position = SYMBOL_INFO.get(symbol, "prefix")
+        return f"{symbol}{amount}" if position == "prefix" else f"{amount}{symbol}"
+
+    return None
+
+
+def _extract_price_from_json_ld(soup) -> str | None:
+    json_ld = soup.find("script", type="application/ld+json")
+    if json_ld:
+        try:
+            data = json.loads(json_ld.string)
+            price = (
+                data.get("offers", {}).get("price")
+                or data.get("price")
+                or data.get("product", {}).get("price")
+            )
+            return str(price) if price else None
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+    return None
 
 
 def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
@@ -275,7 +374,7 @@ async def update_last_checked(stock: User_Stock):
         db_stock.last_checked = datetime.now()
         session.add(db_stock)
         session.commit()
-        print("Last checked updated")
+        print(f"Last checked updated for {stock.stock_url}")
 
 
 async def update_stock_status(stock: User_Stock, status: int):
@@ -284,4 +383,16 @@ async def update_stock_status(stock: User_Stock, status: int):
         db_stock.stock_status = status
         session.add(db_stock)
         session.commit()
-        print("Stock status updated")
+        print(f"Stock status updated for {stock.stock_url}")
+
+
+async def update_stock_price(stock: User_Stock, price: str):
+    if price is None:
+        print(f"Price is None, can't update price for {stock.stock_url}")
+        return
+    with Session() as session:
+        db_stock = stock
+        db_stock.price = price
+        session.add(db_stock)
+        session.commit()
+        print(f"Stock price updated for {stock.stock_url}")
