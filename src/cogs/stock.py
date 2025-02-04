@@ -4,10 +4,11 @@ import re
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 import discord
 from bs4 import BeautifulSoup
+from discord import app_commands
 from discord.ext import commands
 from playwright.async_api import async_playwright
 from price_parser import Price
@@ -53,92 +54,138 @@ ISO_TO_SYMBOL = {
 }
 
 
-class Stock(commands.Cog):
-    def __init__(self, bot):
+class Stock(commands.Cog, name="Stock Watcher"):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.group(name="stock")
-    async def stock(self, ctx):
-        if ctx.invoked_subcommand is None:
-            subcommand_names = ", ".join(
-                [cmd.name for cmd in ctx.command.commands if cmd.name != "test"]
-            )
-            await ctx.reply(f"Available subcommands: **{subcommand_names}**")
+    stock = app_commands.Group(
+        name="stock", description="Manage your product watchlist"
+    )
 
-    @stock.command(name="add")
-    async def add_watching(self, ctx, url, name=None):
+    @stock.command(name="add", description="Add a product to your watchlist")
+    @app_commands.describe(
+        url="The URL of the product to add", name="The name of the stock"
+    )
+    async def add_watching(
+        self, interaction: discord.Interaction, url: str, name: Optional[str]
+    ):
         # check if user is in db
-        if db.get_user(ctx.author) is None:
+        if db.get_user(interaction.user) is None:
             print("User doesn't exist, adding to database")
-            db.add_user(ctx.author)
+            db.add_user(interaction.user)
         else:
             print("User already exists")
 
         # check if stock is in db for user
-        if get_stock(ctx.author, url) is None:
+        if get_stock(interaction.user, url) is None:
             print("Stock not watched, adding")
 
             if name is None:
-                name = await get_stock_name(url)
+                try:
+                    name = await get_stock_name(url)
+                except Exception as e:
+                    print(f"Couldn't get stock name: {e}")
 
-            await ctx.reply(f"Adding [{name}](<{url}>) to your watchlist!")
-
-            await add_stock(ctx.author, url, name)
+            await interaction.response.send_message(
+                f"Adding [{name}](<{url}>) to your watchlist!", ephemeral=True
+            )
+            try:
+                await add_stock(interaction.user, url, name)
+            except Exception as e:
+                print(f"Could not add stock to database: {e}")
+                await interaction.response.send_message(
+                    "There was an error adding your product to the database, please report this error with the URL for the product",
+                    ephemeral=True,
+                )
         else:
             print("Stock already watched")
-            await ctx.reply(f"[{name}](<{url}>)is already being watched!")
-        # await check_stock(url)
+            await interaction.response.send_message(
+                f"[{name}](<{url}>)is already being watched!", ephemeral=True
+            )
 
-    @stock.command(name="list")
-    async def list_watching(self, ctx):
-        items = get_users_watched(ctx.author)
+    # TODO: Add remove functionality
+    # @app_commands.describe(number="The index of the stock you wish to remove")
+    @stock.command(name="remove", description="Remove a product from your watchlist")
+    async def remove_watching(self, interaction: discord.Interaction):
+        # TODO: get watched stocks for given user, give them an index
+        # and create buttons the user can interact with based on that
+
+        watched_stocks = await get_users_watched(interaction.user)
+        for index, stock in enumerate(watched_stocks):
+            print("temp")
+
+        print("Hello, world!")
+
+    @stock.command(name="list", description="List all product in your watchlist")
+    async def list_watching(self, interaction: discord.Interaction):
+        items = await get_users_watched(interaction.user)
         if not items:
-            await ctx.reply("You're not watching any items!")
+            await interaction.response.send_message(
+                "You're not watching any items!", ephemeral=True
+            )
             return
-        bot_message = await ctx.reply("# Watched Items\n")
+        # bot_message = await interaction.response.send_message(
+        #     "# Watched Items\n", ephemeral=True
+        # )
+        bot_message = "# Watched Items\n"
         for index, item in enumerate(items):
             in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
-            message = f"\n**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** **{item.price}**\n"
-            bot_message = await bot_message.edit(content=bot_message.content + message)
-
-    # functionality testing
-    @stock.command(name="test")
-    async def test(self, ctx):
-        print("Attempting to execute test function")
-        if ctx.author.id == MY_USER_ID:
-            print(f"Authorised user: {ctx.author.name} - ID: {ctx.author.id}")
-            print("\n\n--------------- Testing ---------------\n\n")
-            # soup = await fetch_page_contents(
-            #     "https://supernote.au/shop/p/supernote-manta"
+            bot_message += f"**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** **{item.price}**\n"
+            # await interaction.response.edit_message("test")
+            # # bot_message = await interaction.response.edit_message(
+            #     content=bot_message.content + message
             # )
-            soup = await fetch_page_contents("https://kriticalpads.com/evga-3080-ftw3")
+        await interaction.response.send_message(bot_message, ephemeral=True)
 
-            # Regex to find price regardless of if it's a prefix or suffix
-            price_regex = re.compile(
-                r"(?:"
-                r"(?:[\$\£\¥\₹]\s?\d+(?:[.,]\d+)?)"  # e.g. $9.99, ¥ 1000, ₹50, etc.
-                r"|"
-                r"(?:\d+(?:[.,]\d+)?\s?(?:€|kr|zł))"  # e.g. 9.99€, 1000 kr, 50zł, etc.
-                r")",
-                re.IGNORECASE,
-            )
-            potential_prices = soup.find_all(
-                lambda tag: tag.string and re.search(price_regex, tag.string)
-            )
-            if potential_prices:
-                price_text = potential_prices[0].get_text(strip=True)
-                print(price_text)
+    # # functionality testing
+    # @stock.command(name="test", description="Test functionality")
+    # async def test(self, interaction: discord.Interaction):
+    #     print("Attempting to execute test function")
+    #     if interaction.user.id == MY_USER_ID:
+    #         print(
+    #             f"Authorised user: {interaction.user.name} - ID: {interaction.user.id}"
+    #         )
+    #         print("\n\n--------------- Testing ---------------\n\n")
+    #         # soup = await fetch_page_contents(
+    #         #     "https://supernote.au/shop/p/supernote-manta"
+    #         # )
+    #         soup = await fetch_page_contents("https://kriticalpads.com/evga-3080-ftw3")
+    #
+    #         # Regex to find price regardless of if it's a prefix or suffix
+    #         price_regex = re.compile(
+    #             r"(?:"
+    #             r"(?:[\$\£\¥\₹]\s?\d+(?:[.,]\d+)?)"  # e.g. $9.99, ¥ 1000, ₹50, etc.
+    #             r"|"
+    #             r"(?:\d+(?:[.,]\d+)?\s?(?:€|kr|zł))"  # e.g. 9.99€, 1000 kr, 50zł, etc.
+    #             r")",
+    #             re.IGNORECASE,
+    #         )
+    #         potential_prices = soup.find_all(
+    #             lambda tag: tag.string and re.search(price_regex, tag.string)
+    #         )
+    #         if potential_prices:
+    #             price_text = potential_prices[0].get_text(strip=True)
+    #             print(price_text)
+    #
+    #         try:
+    #             user = self.bot.get_user(MY_USER_ID)
+    #             if user is None:
+    #                 user = await self.bot.fetch_user(MY_USER_ID)
+    #
+    #             await user.send("Hello!")
+    #         except Exception as e:
+    #             print(f"Error sending message: {e}")
 
     @commands.Cog.listener()
-    async def on_application_command_error(self, ctx, error):
+    async def on_application_command_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ):
         if isinstance(error, commands.NotOwner):
-            await ctx.respond("You don't have permission to use that command")
+            await interaction.response.send_message(
+                "You don't have permission to use that command"
+            )
         else:
             raise error  # raises the other errors
-
-
-async def setup(bot):
-    await bot.add_cog(Stock(bot))
 
 
 class Stock_Status(Enum):
@@ -146,7 +193,7 @@ class Stock_Status(Enum):
     IN_STOCK = 1
 
 
-async def auto_check_stock(bot, interval: int = 60):
+async def auto_check_stock(bot: commands.Bot, interval: int = 60):
     print("Executing automatic stock checking")
     while True:
         # TODO: check for duplicate url's and filter them
@@ -181,7 +228,7 @@ async def auto_check_stock(bot, interval: int = 60):
         await asyncio.sleep(interval)
 
 
-async def check_stock(url) -> int:
+async def check_stock(url: str) -> int:
     soup = await fetch_page_contents(url)
 
     for hidden_element in soup.select("[style*='display:none'], [hidden]"):
@@ -237,7 +284,7 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
     return soup
 
 
-async def add_stock(user: discord.Member, url, stock_name):
+async def add_stock(user: discord.Member, url: str, stock_name: str):
     stock_status = await check_stock(url)
     date_added = datetime.now()
     last_checked = datetime.now()
@@ -259,7 +306,7 @@ async def add_stock(user: discord.Member, url, stock_name):
         session.commit()
 
 
-def get_stock(user: discord.Member, url) -> User_Stock | None:
+def get_stock(user: discord.Member, url: str) -> User_Stock | None:
     with Session() as session:
         return (
             session.query(User_Stock)
@@ -269,7 +316,10 @@ def get_stock(user: discord.Member, url) -> User_Stock | None:
 
 
 @lru_cache(maxsize=100)
-async def get_stock_price(url) -> str:
+async def get_stock_price(url: str) -> str:
+    """
+    Finds the price of given products url: str and returns it formatted.
+    """
     soup = await fetch_page_contents(url)
 
     # helper function to format currency
@@ -327,8 +377,10 @@ async def get_stock_price(url) -> str:
     return "Price not found"
 
 
-def _parse_price_string(text) -> str | None:
-    # parses given text with price_parser
+def _parse_price_string(text: str) -> str | None:
+    """
+    Parses the given text:str and finds the product price if it is found, otherwise returns None
+    """
     price = Price.fromstring(text)
     if price and price.amount_float:
         currency = price.currency.strip()
@@ -341,7 +393,10 @@ def _parse_price_string(text) -> str | None:
     return None
 
 
-def _extract_price_from_json_ld(soup) -> str | None:
+def _extract_price_from_json_ld(soup: BeautifulSoup) -> str | None:
+    """
+    Extracts the price of a product from the given parsed HTML/XML document, if it is in JSON-LD format
+    """
     json_ld = soup.find("script", type="application/ld+json")
     if json_ld:
         try:
@@ -357,18 +412,29 @@ def _extract_price_from_json_ld(soup) -> str | None:
     return None
 
 
-def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
-    with Session() as session:
-        return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
+async def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
+    """
+    Gets all the given discord.Member's User_Stock's and returns as a list or None
+    """
+    try:
+        with Session() as session:
+            return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
+    except Exception as e:
+        print(f"Error getting users watched: {e}")
 
 
-# All watched stock regardless of user
 async def get_all_watched() -> List[User_Stock] | None:
+    """
+    Gets all watched User_Stock for every user and returns as a list or None
+    """
     with Session() as session:
         return session.query(User_Stock).filter().all()
 
 
 async def update_last_checked(stock: User_Stock):
+    """
+    Updates the given User_Stock.last_checked with the current datetime.now()
+    """
     with Session() as session:
         db_stock = stock
         db_stock.last_checked = datetime.now()
@@ -378,6 +444,9 @@ async def update_last_checked(stock: User_Stock):
 
 
 async def update_stock_status(stock: User_Stock, status: int):
+    """
+    Update the given User_Stock.stock_status with given status argument
+    """
     with Session() as session:
         db_stock = stock
         db_stock.stock_status = status
@@ -387,6 +456,9 @@ async def update_stock_status(stock: User_Stock, status: int):
 
 
 async def update_stock_price(stock: User_Stock, price: str):
+    """
+    Update the given User_Stock.price with given price argument
+    """
     if price is None:
         print(f"Price is None, can't update price for {stock.stock_url}")
         return
@@ -396,3 +468,12 @@ async def update_stock_price(stock: User_Stock, price: str):
         session.add(db_stock)
         session.commit()
         print(f"Stock price updated for {stock.stock_url}")
+        print("Stock status updated")
+
+
+# class Button(discord.ui.Button):
+#
+
+
+async def setup(bot):
+    await bot.add_cog(Stock(bot))
