@@ -27,23 +27,21 @@ handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w"
 class Cheeky(commands.Bot):
     def __init__(self) -> None:
         super().__init__(intents=intents, command_prefix="!")
-        # super().__init__(
-        #     # TODO: move from dm_only() when ready
-        #     command_prefix=commands.when_mentioned_or("!"),
-        #     intents=intents,
-        #     commands=commands.dm_only(),
-        # )
-        # self.tree = app_commands.CommandTree(self)
 
     async def on_ready(self):
         print(f"{self.user} is ready and online!")
-        # Inialise functionality
-        await self.load_db()
         await self.load_cogs()
-        await self.setup_hook()
-        await self.tree.sync()
+        await self.load_db()
         # create task for auto checking stock
         self.loop.create_task(auto_check_stock(self))
+        try:
+            await self.tree.sync()
+        except Exception as e:
+            print(f"Error syncing tree: {e}")
+
+    # async def setup_hook(self):
+    #     print(f"Copying global to {config.MY_GUILD_ID}")
+    #     await self.tree.sync(guild=MY_GUILD)
 
     async def load_cogs(self) -> None:
         # TODO: rather than hard coding, traverse cogs dir to get cogs
@@ -55,34 +53,21 @@ class Cheeky(commands.Bot):
             except Exception as e:
                 print(f"Failed to load cog {cog}: {e}")
 
-    async def setup_hook(self):
-        print(f"Copying global to {config.MY_GUILD_ID}")
-        self.tree.copy_global_to(guild=MY_GUILD)
-
     async def on_error(*_: object) -> None:
         handle_error(cast(BaseException, sys.exc_info()[1]))
 
     async def load_db(self) -> None:
         try_connect()
 
+    async def on_app_command_error(interaction: discord.Interaction, error: Exception):
+        if not interaction.response_is_done():
+            await interaction.response.send_message(
+                "Command was unable to be executed", ephemeral=True
+            )
+
 
 def handle_error(error: BaseException) -> None:
-    if _is_rate_limit(error):
-        os.execv(
-            sys.executable,
-            (
-                "python",
-                Path(__file__).parent / "__main__.py",
-                *sys.argv[1:],
-                "--rate-limit-delay",
-            ),
-        )
-
-
-def _is_rate_limit(error: BaseException) -> bool:
-    if isinstance(error, discord.app_commands.CommandInvokeError):
-        error = error.original
-    return isinstance(error, discord.HTTPException) and error.status == 429
+    print(f"{error}")
 
 
 def run_bot():
