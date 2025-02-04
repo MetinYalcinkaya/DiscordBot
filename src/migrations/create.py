@@ -3,10 +3,13 @@ from pathlib import Path
 
 script_dir = Path(__file__).parent.parent
 database_file = script_dir / "db/main.db"
+test_database_file = script_dir / "db/test.db"
 
 conn = sqlite3.connect(database_file)
+conn_test = sqlite3.connect(test_database_file)
 
 cursor = conn.cursor()
+cursor_test = conn_test.cursor()
 
 sql_tables = {
     "USER": """CREATE TABLE User(
@@ -28,16 +31,18 @@ sql_tables = {
 
 for key in sql_tables:
     _ = cursor.execute(f"DROP TABLE IF EXISTS {key}")
+    _ = cursor_test.execute(f"DROP TABLE IF EXISTS {key}")
     print(f"Dropped table {key}")
 
 for key in sql_tables:
     _ = cursor.execute(sql_tables[key])
+    _ = cursor_test.execute(sql_tables[key])
     print(f"Created table {key}")
 
-# cursor.execute(sql_create_tables)
-print("Tables created")
-
 conn.commit()
+conn_test.commit()
 print("Changes committed")
 
 conn.close()
+conn_test.close()
+print("Connection to db closed")

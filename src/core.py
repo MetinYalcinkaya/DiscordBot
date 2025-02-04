@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import logging.handlers
 import os
 import sys
 from pathlib import Path
@@ -21,7 +22,24 @@ cogs_list = ["stock", "rng"]
 
 MY_GUILD = discord.Object(id=config.MY_GUILD_ID)
 
-handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
+# Logging setup
+logger = logging.getLogger("discord")
+logger.setLevel(logging.DEBUG)
+
+handler = logging.handlers.RotatingFileHandler(
+    filename="discord.log",
+    encoding="utf-8",
+    maxBytes=32 * 1024 * 1024,
+    backupCount=5,
+    mode="w",
+)
+dt_format = "%Y-%m-%d %H:%M:%S"
+formatter = logging.Formatter(
+    "[{asctime}] [{levelname:<8}] {name}: {message}", dt_format, style="{"
+)
+
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 class Cheeky(commands.Bot):
@@ -74,9 +92,7 @@ def run_bot():
     bot = Cheeky()
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
-            bot.run(config.BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)
-        )
+        loop.run_until_complete(bot.run(config.BOT_TOKEN, log_handler=None))
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt. Shutting down...")
     finally:

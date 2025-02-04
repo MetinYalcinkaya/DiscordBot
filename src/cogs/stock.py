@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 from datetime import datetime
 from enum import Enum
@@ -17,6 +18,8 @@ import db.utils as db
 from config import MY_USER_ID
 from db.connect import Session
 from db.models import User_Stock  # TODO: maybe import User
+
+logger = logging.getLogger(__name__)
 
 SYMBOL_INFO = {
     # Symbols and their positioning
@@ -71,36 +74,42 @@ class Stock(commands.Cog, name="Stock Watcher"):
     ):
         # check if user is in db
         if db.get_user(interaction.user) is None:
-            print("User doesn't exist, adding to database")
+            logger.info(
+                f"User {interaction.user.id}:{interaction.user.name} isn't in database, adding"
+            )
             db.add_user(interaction.user)
         else:
-            print("User already exists")
+            logger.info(
+                f"User {interaction.user.id}:{interaction.user.name} already exists in database"
+            )
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
 
         # check if stock is in db for user
         if get_stock(interaction.user, url) is None:
-            print("Stock not watched, adding")
+            logger.info(f"Stock {url} not watched for user {interaction.user}, adding")
 
             if name is None:
                 try:
                     name = await get_stock_name(url)
                 except Exception as e:
-                    print(f"Couldn't get stock name: {e}")
+                    logger.error(f"Could not get stock name for {url}: {e}")
 
-            await interaction.response.send_message(
-                f"Adding [{name}](<{url}>) to your watchlist!", ephemeral=True
+            await interaction.edit_original_response(
+                content=f"Adding [{name}](<{url}>) to your watchlist!"
             )
             try:
                 await add_stock(interaction.user, url, name)
             except Exception as e:
-                print(f"Could not add stock to database: {e}")
-                await interaction.response.send_message(
-                    "There was an error adding your product to the database, please report this error with the URL for the product",
-                    ephemeral=True,
+                logger.info(f"Could not add stock to database: {e}")
+                await interaction.edit_original_response(
+                    content=f"There was an error adding your product to the database, please report this error with the URL for the product: [URL](<{url}>)"
                 )
         else:
-            print("Stock already watched")
-            await interaction.response.send_message(
-                f"[{name}](<{url}>)is already being watched!", ephemeral=True
+            logger.info(f"Stock {url} already watched for user {interaction.user.id}")
+            name = get_stock(interaction.user, url).stock_name
+            await interaction.edit_original_response(
+                content=f"[{name}](<{url}>) is already being watched!"
             )
 
     # TODO: Add remove functionality
@@ -194,7 +203,7 @@ class Stock_Status(Enum):
 
 
 async def auto_check_stock(bot: commands.Bot, interval: int = 60):
-    print("Executing automatic stock checking")
+    logger.info("Starting automatic stock checking")
     while True:
         # TODO: check for duplicate url's and filter them
         all_stocks = await get_all_watched()
@@ -204,7 +213,7 @@ async def auto_check_stock(bot: commands.Bot, interval: int = 60):
             if user is None:
                 user = await bot.fetch_user(stock.user_id)
 
-            print(f"Checking stock {stock.stock_url}")
+            logger.info(f"Checking stock {stock.stock_url}")
 
             time_passed = (datetime.now() - stock.last_checked).total_seconds()
             if time_passed >= stock.check_interval:
@@ -224,7 +233,7 @@ async def auto_check_stock(bot: commands.Bot, interval: int = 60):
                     await user.send(message)
 
             else:
-                print(f"No need to check {stock.stock_url}")
+                logger.info(f"No need to check {stock.stock_url}")
         await asyncio.sleep(interval)
 
 
@@ -244,10 +253,10 @@ async def check_stock(url: str) -> int:
             break
 
     if in_stock_bool:
-        print("Product is in stock!")
+        logger.info(f"Product {url} was found in stock")
         return Stock_Status.IN_STOCK.value
     else:
-        print("Product is out of stock")
+        logger.info(f"Product {url} was found out of stock")
         return Stock_Status.OUT_OF_STOCK.value
 
 
@@ -274,7 +283,7 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
         try:
             await page.goto(url, wait_until="networkidle")
         except Exception as e:
-            print(f"Error navigating to webpage {url}: {e}")
+            logger.error(f"Error navigating to webpage {url}: {e}")
         html = await page.content()
         await browser.close()
 
@@ -408,7 +417,7 @@ def _extract_price_from_json_ld(soup: BeautifulSoup) -> str | None:
             )
             return str(price) if price else None
         except json.JSONDecodeError as e:
-            print(f"JSON decode error: {e}")
+            logger.error(f"JSON decode error: {e}")
     return None
 
 
@@ -420,7 +429,7 @@ async def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
         with Session() as session:
             return session.query(User_Stock).filter(User_Stock.user_id == user.id).all()
     except Exception as e:
-        print(f"Error getting users watched: {e}")
+        logger.error(f"Error getting users watched: {e}")
 
 
 async def get_all_watched() -> List[User_Stock] | None:
@@ -428,7 +437,10 @@ async def get_all_watched() -> List[User_Stock] | None:
     Gets all watched User_Stock for every user and returns as a list or None
     """
     with Session() as session:
-        return session.query(User_Stock).filter().all()
+        try:
+            return session.query(User_Stock).filter().all()
+        except Exception as e:
+            logger.error(f"Error getting all watched: {e}")
 
 
 async def update_last_checked(stock: User_Stock):
@@ -440,7 +452,7 @@ async def update_last_checked(stock: User_Stock):
         db_stock.last_checked = datetime.now()
         session.add(db_stock)
         session.commit()
-        print(f"Last checked updated for {stock.stock_url}")
+        logger.info(f"Last checked updated for {stock.stock_url}")
 
 
 async def update_stock_status(stock: User_Stock, status: int):
@@ -452,7 +464,7 @@ async def update_stock_status(stock: User_Stock, status: int):
         db_stock.stock_status = status
         session.add(db_stock)
         session.commit()
-        print(f"Stock status updated for {stock.stock_url}")
+        logger.info(f"Stock status updated for {stock.stock_url}")
 
 
 async def update_stock_price(stock: User_Stock, price: str):
@@ -467,8 +479,7 @@ async def update_stock_price(stock: User_Stock, price: str):
         db_stock.price = price
         session.add(db_stock)
         session.commit()
-        print(f"Stock price updated for {stock.stock_url}")
-        print("Stock status updated")
+        logger.info(f"Stock price updated for {stock.stock_url}")
 
 
 # class Button(discord.ui.Button):
