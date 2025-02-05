@@ -415,12 +415,9 @@ def _extract_price_from_json_ld(soup: BeautifulSoup) -> str | None:
     if json_ld:
         try:
             data = json.loads(json_ld.string)
-            price = (
-                data.get("offers", {}).get("price")
-                or data.get("price")
-                or data.get("product", {}).get("price")
-            )
-            return str(price) if price else None
+            if "offers" in data:
+                return data["offers"]
+            return data
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
     return None
