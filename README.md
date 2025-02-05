@@ -9,6 +9,7 @@ A simple Discord bot written in Python, packaged with [uv](https://github.com/as
 - [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy); SQLite database interaction
 - [Playwright](https://github.com/microsoft/playwright-python); headless browser for http requests
 - [Dotenv](https://github.com/theskumar/python-dotenv); .env file functionality
+- [PyTest](https://github.com/pytest-dev/pytest/): unit testing
 
 ## Features
 
@@ -17,6 +18,10 @@ A simple Discord bot written in Python, packaged with [uv](https://github.com/as
 Watches user added links of products to see the price and stock status of it. If
 the price or stock status changes, it will direct message the user of the
 changes.
+
+### RNG
+
+Various random number generated tools, such as coin flips and dice rolls
 
 ## Installation
 
@@ -29,11 +34,13 @@ WIP
 - [ ] Install instructions
   - [ ] Docker?
 - [ ] CLI interactivity
+- [ ] Unit testing
+- [x] Logging
 
 ### Core
 
 - [ ] Traverse cogs dir to load cogs rather than hard coding
-- [ ] Rewrite ! prefix to use [app_commands/trees](https://discordpy.readthedocs.io/en/stable/interactions/api.html#appcommand)
+- [x] Rewrite ! prefix to use [app_commands/trees](https://discordpy.readthedocs.io/en/stable/interactions/api.html#appcommand)
 
 ### Stock Checker
 
@@ -41,11 +48,11 @@ WIP
 - [x] Automated checking #07be7c6
 - [x] Pricing tracker #fe1e985
 
-### Flip/Roll/RNG
+### RNG
 
-- [ ] Find better name and group together
+- [x] Find better name and group together
   - RNG seems to be good
-- [ ] Coin flip
+- [x] Coin flip
 - [ ] Dice roll
 - [ ] Wheel of fortune?
   - Multiple options, removes previous when landed
