@@ -8,14 +8,13 @@ from typing import List, Optional
 
 import discord
 from async_lru import alru_cache
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from discord import app_commands
 from discord.ext import commands
 from playwright.async_api import async_playwright
-from price_parser import Price
+from price_parser.parser import Price
 
 import db.utils as db
-from config import MY_USER_ID
 from db.connect import Session
 from db.models import User_Stock  # TODO: maybe import User
 
@@ -92,8 +91,17 @@ class Stock(commands.Cog, name="Stock Watcher"):
             if name is None:
                 try:
                     name = await get_stock_name(url)
+                    if name is None:
+                        await interaction.edit_original_response(
+                            content="Could not get the product name. Please provide a name manually"
+                        )
+                        return
                 except Exception as e:
                     logger.error(f"Could not get stock name for {url}: {e}")
+                    await interaction.edit_original_response(
+                        content="Could not get the product name. Please provide a name manually."
+                    )
+                    return
 
             await interaction.edit_original_response(
                 content=f"Adding [{name}](<{url}>) to your watchlist!"
@@ -107,9 +115,15 @@ class Stock(commands.Cog, name="Stock Watcher"):
                 )
         else:
             logger.info(f"Stock {url} already watched for user {interaction.user.id}")
-            name = get_stock(interaction.user, url).stock_name
+            stock = get_stock(interaction.user, url)
+            if stock is None:
+                await interaction.edit_original_response(
+                    content="An error occured while retrievng the stock information"
+                )
+                return
+
             await interaction.edit_original_response(
-                content=f"[{name}](<{url}>) is already being watched!"
+                content=f"[{stock.stock_name}](<{url}>) is already being watched!"
             )
 
     # TODO: Add remove functionality
@@ -120,6 +134,8 @@ class Stock(commands.Cog, name="Stock Watcher"):
         # and create buttons the user can interact with based on that
 
         watched_stocks = await get_users_watched(interaction.user)
+        if not watched_stocks:
+            return
         for index, stock in enumerate(watched_stocks):
             print("temp")
 
@@ -212,34 +228,38 @@ async def auto_check_stock(bot: commands.Bot, interval: int = 60):
     while True:
         # TODO: check for duplicate url's and filter them
         all_stocks = await get_all_watched()
-        for stock in all_stocks:
-            # try get user from cache, otherwise fetch directly
-            user = bot.get_user(stock.user_id)
-            if user is None:
-                user = await bot.fetch_user(stock.user_id)
+        if all_stocks:
+            for stock in all_stocks:
+                # try get user from cache, otherwise fetch directly
+                user = bot.get_user(stock.user_id)
+                if user is None:
+                    user = await bot.fetch_user(stock.user_id)
 
-            logger.info(f"Checking stock {stock.stock_url}")
+                logger.info(f"Checking stock {stock.stock_url}")
 
-            time_passed = (datetime.now() - stock.last_checked).total_seconds()
-            if time_passed >= stock.check_interval:
-                stock_status = await check_stock(stock.stock_url) == 1
-                price = await get_stock_price(stock.stock_url)
-                await update_last_checked(stock)
-                await update_stock_status(stock, stock_status)
-                if stock_status != stock.stock_status:
-                    in_stock_message = (
-                        "In stock" if stock_status == 1 else "Out of stock"
-                    )
-                    message = f"{stock.stock_name} is now **{in_stock_message}**!"
-                    await user.send(message)
-                if price != stock.price:
-                    message = f"[{stock.stock_name}](<{stock.stock_url}>) price change: {stock.price} -> {price}"
-                    await update_stock_price(stock, price)
-                    await user.send(message)
+                time_passed = (datetime.now() - stock.last_checked).total_seconds()
+                if time_passed >= stock.check_interval:
+                    stock_status = await check_stock(stock.stock_url) == 1
+                    price = await get_stock_price(stock.stock_url)
+                    await update_last_checked(stock)
+                    await update_stock_status(stock, stock_status)
+                    if stock_status != stock.stock_status:
+                        in_stock_message = (
+                            "In stock" if stock_status == 1 else "Out of stock"
+                        )
+                        message = f"{stock.stock_name} is now **{in_stock_message}**!"
+                        await user.send(message)
+                    if price != stock.price:
+                        message = f"[{stock.stock_name}](<{stock.stock_url}>) price change: {stock.price} -> {price}"
+                        await update_stock_price(stock, price)
+                        await user.send(message)
 
-            else:
-                logger.info(f"No need to check {stock.stock_url}")
-        await asyncio.sleep(interval)
+                else:
+                    logger.info(f"No need to check {stock.stock_url}")
+            await asyncio.sleep(interval)
+        else:
+            logger.info("No stocks in database, sleeping")
+            await asyncio.sleep(interval)
 
 
 async def check_stock(url: str) -> int:
@@ -298,7 +318,7 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
     return soup
 
 
-async def add_stock(user: discord.Member, url: str, stock_name: str):
+async def add_stock(user: discord.Member | discord.User, url: str, stock_name: str):
     stock_status = await check_stock(url)
     date_added = datetime.now()
     last_checked = datetime.now()
@@ -320,7 +340,7 @@ async def add_stock(user: discord.Member, url: str, stock_name: str):
         session.commit()
 
 
-def get_stock(user: discord.Member, url: str) -> User_Stock | None:
+def get_stock(user: discord.Member | discord.User, url: str) -> User_Stock | None:
     with Session() as session:
         return (
             session.query(User_Stock)
@@ -337,7 +357,11 @@ async def get_stock_price(url: str) -> str:
     soup = await fetch_page_contents(url)
 
     # helper function to format currency
-    def format_price(currency_code, price) -> str:
+    def format_price(currency_code: str | list[str], price: str | list[str]) -> str:
+        if isinstance(currency_code, list):
+            currency_code = currency_code[0]
+        if isinstance(price, list):
+            price = price[0]
         symbol = ISO_TO_SYMBOL.get(currency_code, currency_code)
         position = SYMBOL_INFO.get(symbol, "prefix")
         return f"{symbol}{price}" if position == "prefix" else f"{price}{symbol}"
@@ -345,19 +369,33 @@ async def get_stock_price(url: str) -> str:
     # check schema.org meta tags
     price_meta = soup.find("meta", itemprop="price")
     currency_meta = soup.find("meta", itemprop="priceCurrency")
-    if price_meta and currency_meta:
-        return format_price(currency_meta["content"], price_meta["content"])
+    if isinstance(price_meta, Tag) and isinstance(currency_meta, Tag):
+        price_val = price_meta.get("content")
+        currency_val = currency_meta.get("content")
+        if price_val is not None and currency_val is not None:
+            return format_price(currency_val, price_val)
 
     # check opengraph meta tags
     price_og = soup.find("meta", property="product:price:amount")
     currency_og = soup.find("meta", property="product:price:currency")
-    if price_og and currency_og:
-        return format_price(currency_og["content"], price_og["content"])
+    if isinstance(price_og, Tag) and isinstance(currency_og, Tag):
+        price_val = price_og.get("content")
+        currency_val = currency_og.get("content")
+        if price_val is not None and currency_val is not None:
+            return format_price(currency_val, price_val)
 
     # check json-ld data
     json_data = _extract_price_from_json_ld(soup)
-    if json_data and "price" in json_data and "currency" in json_data:
-        return format_price(json_data["currency"], json_data["price"])
+    if (
+        json_data
+        and isinstance(json_data, dict)
+        and json_data.get("price") is not None
+        and json_data.get("currency") is not None
+    ):
+        price_val = json_data.get("price")
+        currency_val = json_data.get("currency")
+        if isinstance(price_val, (str, list)) and isinstance(currency_val, (str, list)):
+            return format_price(currency_val, price_val)
 
     # common elements by class name
     price_classes = re.compile(
@@ -397,7 +435,10 @@ def _parse_price_string(text: str) -> str | None:
     """
     price = Price.fromstring(text)
     if price and price.amount_float:
-        currency = price.currency.strip()
+        if price.currency:
+            currency = price.currency.strip()
+        else:
+            return None
         amount = price.amount_text
 
         symbol = ISO_TO_SYMBOL.get(currency, currency)
@@ -413,8 +454,16 @@ def _extract_price_from_json_ld(soup: BeautifulSoup) -> str | None:
     """
     json_ld = soup.find("script", type="application/ld+json")
     if json_ld:
+        if isinstance(json_ld, Tag):
+            json_ld_content = json_ld.string
+        else:
+            json_ld_content = json_ld
+
+        if not isinstance(json_ld_content, str):
+            json_ld_content = str(json_ld_content)
+
         try:
-            data = json.loads(json_ld.string)
+            data = json.loads(json_ld_content)
             if "offers" in data:
                 return data["offers"]
             return data
@@ -423,7 +472,9 @@ def _extract_price_from_json_ld(soup: BeautifulSoup) -> str | None:
     return None
 
 
-async def get_users_watched(user: discord.Member) -> List[User_Stock] | None:
+async def get_users_watched(
+    user: discord.Member | discord.User,
+) -> List[User_Stock] | None:
     """
     Gets all the given discord.Member's User_Stock's and returns as a list or None
     """
@@ -473,9 +524,6 @@ async def update_stock_price(stock: User_Stock, price: str):
     """
     Update the given User_Stock.price with given price argument
     """
-    if price is None:
-        print(f"Price is None, can't update price for {stock.stock_url}")
-        return
     with Session() as session:
         db_stock = stock
         db_stock.price = price
