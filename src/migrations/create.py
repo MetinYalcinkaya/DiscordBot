@@ -34,10 +34,8 @@ for key in sql_tables:
     _ = cursor.execute(sql_tables[key])
     print(f"Created table {key}")
 
-# cursor.execute(sql_create_tables)
-print("Tables created")
-
 conn.commit()
 print("Changes committed")
 
 conn.close()
+print("Connection to db closed")
