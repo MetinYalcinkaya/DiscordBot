@@ -4,10 +4,10 @@ import logging
 import re
 from datetime import datetime
 from enum import Enum
-from functools import lru_cache
 from typing import List, Optional
 
 import discord
+from async_lru import alru_cache
 from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import commands
@@ -198,6 +198,11 @@ class Stock(commands.Cog, name="Stock Watcher"):
 
 
 class Stock_Status(Enum):
+    """
+    OUT_OF_STOCK = 0
+    IN_STOCK     = 1
+    """
+
     OUT_OF_STOCK = 0
     IN_STOCK = 1
 
@@ -324,7 +329,7 @@ def get_stock(user: discord.Member, url: str) -> User_Stock | None:
         )
 
 
-@lru_cache(maxsize=100)
+@alru_cache(maxsize=100)
 async def get_stock_price(url: str) -> str:
     """
     Finds the price of given products url: str and returns it formatted.
