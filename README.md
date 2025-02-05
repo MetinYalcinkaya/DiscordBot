@@ -1,6 +1,6 @@
 # DiscordBot
 
-A simple Discord bot written in Python, packaged with [uv](https://github.com/astral-sh/uv)
+A simple Discord bot written in Python, managed with [uv](https://github.com/astral-sh/uv)
 
 ## Dependencies
 
