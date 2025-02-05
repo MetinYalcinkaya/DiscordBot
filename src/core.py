@@ -23,10 +23,7 @@ cogs_list = ["stock", "rng"]
 MY_GUILD = discord.Object(id=config.MY_GUILD_ID)
 
 # Logging setup
-logger = logging.getLogger("discord")
-logger.setLevel(logging.DEBUG)
-
-handler = logging.handlers.RotatingFileHandler(
+file_handler = logging.handlers.RotatingFileHandler(
     filename="discord.log",
     encoding="utf-8",
     maxBytes=32 * 1024 * 1024,
@@ -38,8 +35,10 @@ formatter = logging.Formatter(
     "[{asctime}] [{levelname:<8}] {name}: {message}", dt_format, style="{"
 )
 
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+file_handler.setFormatter(formatter)
+
+logging.basicConfig(level=logging.DEBUG, handlers=[file_handler])
+logging.getLogger("discord").setLevel(logging.DEBUG)
 
 
 class Cheeky(commands.Bot):

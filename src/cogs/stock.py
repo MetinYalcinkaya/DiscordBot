@@ -362,14 +362,14 @@ async def get_stock_price(url: str) -> str:
     for element in price_element:
         parsed_price = _parse_price_string(element.get_text(strip=True))
         if parsed_price:
-            print(f"Found common elements for {url}")
+            logger.info(f"Found common elements for {url}")
             return parsed_price
 
     # fallback to parsing entire page text
     page_text = soup.get_text()
     parsed_price = _parse_price_string(page_text)
     if parsed_price:
-        print(f"Fallback to parse entire page for {url}")
+        logger.info(f"Fallback to parse entire page for {url}")
         return parsed_price
 
     # regex fallback
@@ -380,7 +380,7 @@ async def get_stock_price(url: str) -> str:
     for text in potential_prices:
         parsed_price = _parse_price_string(text.strip())
         if parsed_price:
-            print(f"Fallback to regex for {url}")
+            logger.info(f"Fallback to regex for {url}")
             return parsed_price
 
     return "Price not found"
