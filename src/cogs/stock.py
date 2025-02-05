@@ -7,7 +7,6 @@ from enum import Enum
 from typing import List, Optional
 
 import discord
-from async_lru import alru_cache
 from bs4 import BeautifulSoup, Tag
 from discord import app_commands
 from discord.ext import commands
@@ -349,7 +348,6 @@ def get_stock(user: discord.Member | discord.User, url: str) -> User_Stock | Non
         )
 
 
-@alru_cache(maxsize=100)
 async def get_stock_price(url: str) -> str:
     """
     Finds the price of given products url: str and returns it formatted.
