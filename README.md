@@ -34,7 +34,7 @@ WIP
 - [ ] Install instructions
   - [ ] Docker?
 - [ ] CLI interactivity
-- [ ] Unit testing
+- [x] Unit testing
 - [x] Logging
 
 ### Core
