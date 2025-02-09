@@ -1,13 +1,13 @@
 import asyncio
 import logging
 import logging.handlers
-import os
 import sys
+from os import listdir
+from os.path import isfile, join
 from pathlib import Path
 from typing import cast
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 import config
@@ -18,7 +18,7 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
-cogs_list = ["stock", "rng"]
+COGS_DIR = Path(__file__).parent.joinpath("cogs")
 
 MY_GUILD = discord.Object(id=config.MY_GUILD_ID)
 
@@ -61,8 +61,15 @@ class Cheeky(commands.Bot):
     #     await self.tree.sync(guild=MY_GUILD)
 
     async def load_cogs(self) -> None:
-        # TODO: rather than hard coding, traverse cogs dir to get cogs
-        cogs = cogs_list
+        """
+        Traverse /cogs/ directory, getting all files except __init__.py,
+        and loads them in to the bot
+        """
+        cogs = [
+            cog.split(".")[0]
+            for cog in listdir(COGS_DIR)
+            if isfile(join(COGS_DIR, cog)) and cog != "__init__.py"
+        ]
         for cog in cogs:
             try:
                 await self.load_extension(f"cogs.{cog}")
