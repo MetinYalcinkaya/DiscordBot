@@ -57,9 +57,13 @@ class RNG(commands.Cog, name="Random Number Functionality"):
 
         if len(arg_sides) == 0:
             SIDES = ["Heads", "Tails"]
-            await interaction.response.send_message(f"{random.choice(SIDES)}!")
+            sides_formatted = ", ".join([side for side in SIDES])
+            message = f"Flipping a coin between: {sides_formatted}...\n\n{random.choice(SIDES)}!"
+            await interaction.response.send_message(message)
         else:
-            await interaction.response.send_message(f"{random.choice(arg_sides)}!")
+            sides_formatted = ", ".join([arg for arg in arg_sides])
+            message = f"Flipping a coin between: {sides_formatted}...\n\n{random.choice(arg_sides)}!"
+            await interaction.response.send_message(message)
 
     # @rng.command(name="dice")
     # async def roll_dice(self, ctx, *args):
