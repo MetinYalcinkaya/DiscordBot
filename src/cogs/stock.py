@@ -255,6 +255,7 @@ async def auto_check_stock(bot: commands.Bot, interval: int = 60):
 
                 else:
                     logger.info(f"No need to check {stock.stock_url}")
+            logger.info(f"Stocks checked, sleeping for {interval}")
             await asyncio.sleep(interval)
         else:
             logger.info("No stocks in database, sleeping")
