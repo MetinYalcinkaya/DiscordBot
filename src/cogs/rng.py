@@ -16,31 +16,7 @@ class RNG(commands.Cog, name="Random Number Functionality"):
         name="rng", description="Collection of random number generation tools"
     )
 
-    # @commands.group(name="rng")
-    # async def rng(self, ctx):
-    #     if ctx.invoked_subcommand is None:
-    #         subcommand_names = ", ".join(
-    #             [cmd.name for cmd in ctx.command.commands if cmd.name != "test"]
-    #         )
-    #         await ctx.reply(f"Available commands: **{subcommand_names}**")
-
-    # @commands.group(name="flip")
-    # async def flip(self, ctx):
-    #     if ctx.invoked_subcommand is None:
-    #         subcommand_names = ", ".join(
-    #             [cmd.name for cmd in ctx.command.commands if cmd.name != "test"]
-    #         )
-    #         await ctx.reply(f"Available subcommands: **{subcommand_names}**")
-
-    # @rng.group(name="roll")
-    # async def roll(self, ctx):
-    #     if ctx.invoked_subcommand is None:
-    #         subcommand_names = ", ".join(
-    #             [cmd.name for cmd in ctx.command.commands if cmd.name != "test"]
-    #         )
-    #         await ctx.reply(f"Available subcommands: **{subcommand_names}**")
-
-    @rng.command(
+    @app_commands.command(
         name="flip_coin",
         description="Flip a coin with given arguments or between heads and tails",
     )
@@ -51,19 +27,17 @@ class RNG(commands.Cog, name="Random Number Functionality"):
         self, interaction: discord.Interaction, arguments: Optional[str]
     ):
         random.seed()
-        arg_sides = []
-        if arguments:
-            arg_sides = arguments.split(" ")
+        sides_formatted = ""
+        message = ""
+        sides = ["Heads", "Tails"]
 
-        if len(arg_sides) == 0:
-            SIDES = ["Heads", "Tails"]
-            sides_formatted = ", ".join([side for side in SIDES])
-            message = f"Flipping a coin between: {sides_formatted}...\n\n{random.choice(SIDES)}!"
-            await interaction.response.send_message(message)
-        else:
-            sides_formatted = ", ".join([arg for arg in arg_sides])
-            message = f"Flipping a coin between: {sides_formatted}...\n\n{random.choice(arg_sides)}!"
-            await interaction.response.send_message(message)
+        if arguments:
+            sides = []
+            sides = arguments.split(" ")
+
+        sides_formatted = ", ".join([side for side in sides])
+        message = f"Flipping a coin between: _{sides_formatted}_...\n\n**{random.choice(sides)}**!"
+        await interaction.response.send_message(message)
 
     # @rng.command(name="dice")
     # async def roll_dice(self, ctx, *args):
