@@ -22,6 +22,8 @@ COGS_DIR = Path(__file__).parent.joinpath("cogs")
 
 MY_GUILD = discord.Object(id=config.MY_GUILD_ID)
 
+logger = logging.getLogger(__name__)
+
 # Logging setup
 file_handler = logging.handlers.RotatingFileHandler(
     filename="discord.log",
@@ -83,11 +85,16 @@ class Cheeky(commands.Bot):
     async def load_db(self) -> None:
         try_connect()
 
-    async def on_app_command_error(interaction: discord.Interaction, error: Exception):
-        if not interaction.response_is_done():
+    async def on_app_command_error(
+        self,
+        interaction: discord.Interaction,
+        error: discord.app_commands.AppCommandError,
+    ):
+        if not interaction.response.is_done():
             await interaction.response.send_message(
                 "Command was unable to be executed", ephemeral=True
             )
+            logger.error(f"Error executing command: {error}")
 
 
 def handle_error(error: BaseException) -> None:
@@ -95,10 +102,13 @@ def handle_error(error: BaseException) -> None:
 
 
 def run_bot():
+    if not config.BOT_TOKEN:
+        raise ValueError("BOT_TOKEN must be set in config")
+
     bot = Cheeky()
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(bot.run(config.BOT_TOKEN, log_handler=None))
+        loop.run_until_complete(bot.start(config.BOT_TOKEN, reconnect=True))
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt. Shutting down...")
     finally:
