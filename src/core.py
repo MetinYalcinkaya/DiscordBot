@@ -102,7 +102,7 @@ def handle_error(error: BaseException) -> None:
 
 
 def run_bot():
-    if not config.BOT_TOKEN:
+    if not config.BOT_TOKEN or config.BOT_TOKEN == 0:
         raise ValueError("BOT_TOKEN must be set in config")
 
     bot = Cheeky()
