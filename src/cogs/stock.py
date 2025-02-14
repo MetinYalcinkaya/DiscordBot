@@ -16,6 +16,7 @@ from price_parser.parser import Price
 import db.utils as db
 from db.connect import Session
 from db.models import User_Stock  # TODO: maybe import User
+from utils import check_valid_url
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,14 @@ class Stock(commands.Cog, name="Stock Watcher"):
         url="The URL of the product to add", name="The name of the stock"
     )
     async def add_watching(
-        self, interaction: discord.Interaction, url: str, name: Optional[str]
+        self, interaction: discord.Interaction, url: str, name: Optional[str] = None
     ):
+        # first check if url is valid
+        if not check_valid_url(url):
+            message = "Invalid URL provided, please input a valid URL"
+            await interaction.response.send_message(message, ephemeral=True)
+            return
+
         # check if user is in db
         if db.get_user(interaction.user) is None:
             logger.info(
@@ -148,57 +155,11 @@ class Stock(commands.Cog, name="Stock Watcher"):
                 "You're not watching any items!", ephemeral=True
             )
             return
-        # bot_message = await interaction.response.send_message(
-        #     "# Watched Items\n", ephemeral=True
-        # )
         bot_message = "# Watched Items\n"
         for index, item in enumerate(items):
             in_stock = "In stock" if item.stock_status == 1 else "Out of stock"
             bot_message += f"**{index + 1}**: _[{item.stock_name}](<{item.stock_url}>)_: **{in_stock}** **{item.price}**\n"
-            # await interaction.response.edit_message("test")
-            # # bot_message = await interaction.response.edit_message(
-            #     content=bot_message.content + message
-            # )
         await interaction.response.send_message(bot_message, ephemeral=True)
-
-    # # functionality testing
-    # @stock.command(name="test", description="Test functionality")
-    # async def test(self, interaction: discord.Interaction):
-    #     print("Attempting to execute test function")
-    #     if interaction.user.id == MY_USER_ID:
-    #         print(
-    #             f"Authorised user: {interaction.user.name} - ID: {interaction.user.id}"
-    #         )
-    #         print("\n\n--------------- Testing ---------------\n\n")
-    #         # soup = await fetch_page_contents(
-    #         #     "https://supernote.au/shop/p/supernote-manta"
-    #         # )
-    #         soup = await fetch_page_contents("https://kriticalpads.com/evga-3080-ftw3")
-    #
-    #         # Regex to find price regardless of if it's a prefix or suffix
-    #         price_regex = re.compile(
-    #             r"(?:"
-    #             r"(?:[\$\£\¥\₹]\s?\d+(?:[.,]\d+)?)"  # e.g. $9.99, ¥ 1000, ₹50, etc.
-    #             r"|"
-    #             r"(?:\d+(?:[.,]\d+)?\s?(?:€|kr|zł))"  # e.g. 9.99€, 1000 kr, 50zł, etc.
-    #             r")",
-    #             re.IGNORECASE,
-    #         )
-    #         potential_prices = soup.find_all(
-    #             lambda tag: tag.string and re.search(price_regex, tag.string)
-    #         )
-    #         if potential_prices:
-    #             price_text = potential_prices[0].get_text(strip=True)
-    #             print(price_text)
-    #
-    #         try:
-    #             user = self.bot.get_user(MY_USER_ID)
-    #             if user is None:
-    #                 user = await self.bot.fetch_user(MY_USER_ID)
-    #
-    #             await user.send("Hello!")
-    #         except Exception as e:
-    #             print(f"Error sending message: {e}")
 
     @commands.Cog.listener()
     async def on_application_command_error(
@@ -238,21 +199,7 @@ async def auto_check_stock(bot: commands.Bot, interval: int = 60):
 
                 time_passed = (datetime.now() - stock.last_checked).total_seconds()
                 if time_passed >= stock.check_interval:
-                    stock_status = await check_stock(stock.stock_url) == 1
-                    price = await get_stock_price(stock.stock_url)
-                    await update_last_checked(stock)
-                    await update_stock_status(stock, stock_status)
-                    if stock_status != stock.stock_status:
-                        in_stock_message = (
-                            "In stock" if stock_status == 1 else "Out of stock"
-                        )
-                        message = f"{stock.stock_name} is now **{in_stock_message}**!"
-                        await user.send(message)
-                    if price != stock.price:
-                        message = f"[{stock.stock_name}](<{stock.stock_url}>) price change: {stock.price} -> {price}"
-                        await update_stock_price(stock, price)
-                        await user.send(message)
-
+                    await check_stock(stock, user)
                 else:
                     logger.info(f"No need to check {stock.stock_url}")
             logger.info(f"Stocks checked, sleeping for {interval}")
@@ -262,13 +209,13 @@ async def auto_check_stock(bot: commands.Bot, interval: int = 60):
             await asyncio.sleep(interval)
 
 
-async def check_stock(url: str) -> int:
+async def fetch_stock_status(url: str) -> int:
     soup = await fetch_page_contents(url)
 
     for hidden_element in soup.select("[style*='display:none'], [hidden]"):
         hidden_element.decompose()
 
-    out_of_stock_strings = ["sold out", "out of stock"]
+    out_of_stock_strings = ["sold out", "out of stock", "not available"]
     page_text = soup.get_text().lower()
     in_stock_bool = True
 
@@ -285,11 +232,30 @@ async def check_stock(url: str) -> int:
         return Stock_Status.OUT_OF_STOCK.value
 
 
+async def check_stock(stock: User_Stock, user: discord.Member | discord.User):
+    stock_status = await fetch_stock_status(stock.stock_url)
+    price = await get_stock_price(stock.stock_url)
+
+    await update_last_checked(stock)
+    await update_stock_status(stock, stock_status)
+
+    if stock_status != stock.stock_status:
+        in_stock_message = "In stock" if stock_status == 1 else "Out of stock"
+        message = f"{stock.stock_name} is now **{in_stock_message}**!"
+        await user.send(message)
+
+    if price != stock.price:
+        message = f"[{stock.stock_name}](<{stock.stock_url}>) price change: {stock.price} -> {price}"
+        await update_stock_price(stock, price)
+        await user.send(message)
+
+
 async def get_stock_name(url: str) -> str | None:
     soup = await fetch_page_contents(url)
     if soup.title is not None:
         if soup.title.string is not None:
             return re.sub(r"\s[—-].*", "", soup.title.string).strip()
+    return None
 
 
 async def fetch_page_contents(url: str) -> BeautifulSoup:
@@ -319,7 +285,7 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
 
 
 async def add_stock(user: discord.Member | discord.User, url: str, stock_name: str):
-    stock_status = await check_stock(url)
+    stock_status = await fetch_stock_status(url)
     date_added = datetime.now()
     last_checked = datetime.now()
     check_interval = 300
@@ -336,8 +302,13 @@ async def add_stock(user: discord.Member | discord.User, url: str, stock_name: s
             check_interval=check_interval,
             price=price,
         )
-        session.add(db_stock)
-        session.commit()
+        try:
+            session.add(db_stock)
+        except Exception as e:
+            logger.error(f"Error adding stock, rolling back: {e}")
+            session.rollback()
+        finally:
+            session.commit()
 
 
 def get_stock(user: discord.Member | discord.User, url: str) -> User_Stock | None:
@@ -502,9 +473,14 @@ async def update_last_checked(stock: User_Stock):
     with Session() as session:
         db_stock = stock
         db_stock.last_checked = datetime.now()
-        session.add(db_stock)
-        session.commit()
-        logger.info(f"Last checked updated for {stock.stock_url}")
+        try:
+            session.add(db_stock)
+        except Exception as e:
+            logger.error(f"Error updating last checked, rolling back: {e}")
+            session.rollback()
+        finally:
+            session.commit()
+            logger.info(f"Last checked updated for {stock.stock_url}")
 
 
 async def update_stock_status(stock: User_Stock, status: int):
@@ -514,9 +490,14 @@ async def update_stock_status(stock: User_Stock, status: int):
     with Session() as session:
         db_stock = stock
         db_stock.stock_status = status
-        session.add(db_stock)
-        session.commit()
-        logger.info(f"Stock status updated for {stock.stock_url}")
+        try:
+            session.add(db_stock)
+        except Exception as e:
+            logger.error(f"Error updating stock status, rolling back: {e}")
+            session.rollback()
+        finally:
+            session.commit()
+            logger.info(f"Stock status updated for {stock.stock_url}")
 
 
 async def update_stock_price(stock: User_Stock, price: str):
@@ -526,9 +507,14 @@ async def update_stock_price(stock: User_Stock, price: str):
     with Session() as session:
         db_stock = stock
         db_stock.price = price
-        session.add(db_stock)
-        session.commit()
-        logger.info(f"Stock price updated for {stock.stock_url}")
+        try:
+            session.add(db_stock)
+        except Exception as e:
+            logger.error(f"Error updating last checked, rolling back: {e}")
+            session.rollback()
+        finally:
+            session.commit()
+            logger.info(f"Stock price updated for {stock.stock_url}")
 
 
 # class Button(discord.ui.Button):

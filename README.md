@@ -58,3 +58,7 @@ WIP
   - Multiple options, removes previous when landed
 
 ### Other
+
+## Acknowledgments
+
+[Ghostty Discord Bot](https://github.com/ghostty-org/discord-bot/) - The idea, motivation, and structure of the project started here
