@@ -34,6 +34,10 @@ class RNG(commands.Cog, name="Random Number Functionality"):
         if arguments:
             sides = []
             sides = arguments.split(" ")
+            if len(sides) < 2:
+                message = "You need two or more options!"
+                await interaction.response.send_message(message)
+                return
 
         sides_formatted = ", ".join([side for side in sides])
         message = f"Flipping a coin between: _{sides_formatted}_...\n\n**{random.choice(sides)}**!"
