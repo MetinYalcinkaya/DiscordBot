@@ -47,6 +47,7 @@ WIP
 - [x] Update message as stock is checked #17fb574
 - [x] Automated checking #07be7c6
 - [x] Pricing tracker #fe1e985
+- [ ] Deleting watched stocks with buttons
 
 ### RNG
 
