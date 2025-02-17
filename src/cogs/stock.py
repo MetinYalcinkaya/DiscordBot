@@ -15,7 +15,7 @@ from price_parser.parser import Price
 
 import db.utils as db
 from db.connect import Session
-from db.models import User_Stock  # TODO: maybe import User
+from db.models import User_Stock
 from utils import check_valid_url
 
 logger = logging.getLogger(__name__)
