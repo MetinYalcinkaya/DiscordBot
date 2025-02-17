@@ -113,7 +113,7 @@ class Stock(commands.Cog, name="Stock Watcher"):
                 content=f"Adding [{name}](<{url}>) to your watchlist!"
             )
             try:
-                await add_stock(interaction.user, url, name)
+                await add_user_watching(interaction.user, url, name)
             except Exception as e:
                 logger.info(f"Could not add stock to database: {e}")
                 await interaction.edit_original_response(
@@ -141,6 +141,9 @@ class Stock(commands.Cog, name="Stock Watcher"):
                 view=Remove(watched_stocks),
                 ephemeral=True,
             )
+        else:
+            message = "You have nothing watched. Add some products to watch!"
+            await interaction.response.send_message(message, ephemeral=True)
 
     @stock.command(name="list", description="List all product in your watchlist")
     async def list_watching(self, interaction: discord.Interaction):
@@ -279,7 +282,9 @@ async def fetch_page_contents(url: str) -> BeautifulSoup:
     return soup
 
 
-async def add_stock(user: discord.Member | discord.User, url: str, stock_name: str):
+async def add_user_watching(
+    user: discord.Member | discord.User, url: str, stock_name: str
+):
     stock_status = await fetch_stock_status(url)
     date_added = datetime.now()
     last_checked = datetime.now()

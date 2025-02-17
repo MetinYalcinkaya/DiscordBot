@@ -1,12 +1,23 @@
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
+import discord
 import pytest
 from bs4 import BeautifulSoup, Tag
 from discord import Interaction, app_commands
 from discord.ext import commands
 
 from cogs import stock
+from cogs.stock import Remove, RemoveButton, Stock
 from db.models import User, User_Stock
+
+
+@pytest.fixture
+def mock_discord_user():
+    user = MagicMock(spec=discord.User)
+    user.id = 12345
+    user.name = "TestUser"
+    return user
 
 
 def test_parse_price_string_valid():
@@ -257,18 +268,16 @@ async def test_get_stock_price_no_price(mocker):
 
 
 @pytest.mark.asyncio
-async def test_add_watching(mocker):
+async def test_add_user_watching(mocker, mock_discord_user):
     bot = MagicMock()
 
-    user = MagicMock()
-    user.id = 123
-    user.name = "Testing"
+    user = mock_discord_user
 
     interaction = MagicMock(spec=Interaction)
     interaction.user = user
     interaction.response = AsyncMock()
 
-    stock_cog = stock.Stock(bot)
+    stock_cog = Stock(bot)
 
     # patch database funcs to prevent actual database calls
     mocker.patch("cogs.stock.db.get_user", return_value=None)
@@ -276,7 +285,7 @@ async def test_add_watching(mocker):
 
     # patch other database funcs or external calls
     mocker.patch("cogs.stock.get_stock", return_value=None)
-    mocker.patch("cogs.stock.add_stock", return_value=AsyncMock())
+    mocker.patch("cogs.stock.add_user_watching", return_value=AsyncMock())
     mocker.patch(
         "cogs.stock.get_stock_name", return_value=AsyncMock(return_value="Test Product")
     )
@@ -286,18 +295,16 @@ async def test_add_watching(mocker):
 
 
 @pytest.mark.asyncio
-async def test_add_watching_invalid_url(mocker):
+async def test_add_user_watching_invalid_url(mocker, mock_discord_user):
     bot = MagicMock()
 
-    user = MagicMock()
-    user.id = 123
-    user.name = "Testing"
+    user = mock_discord_user
 
     interaction = AsyncMock(spec=Interaction)
     interaction.user = user
     interaction.response = AsyncMock()
     # interaction.response.send_message = AsyncMock()
-    stock_cog = stock.Stock(bot)
+    stock_cog = Stock(bot)
 
     mocker.patch("cogs.stock.get_stock_name", return_value=None)
 
@@ -310,26 +317,23 @@ async def test_add_watching_invalid_url(mocker):
 
 
 @pytest.mark.asyncio
-async def test_add_watching_invalid_name(mocker):
+async def test_add_watching_invalid_name(mocker, mock_discord_user):
     # HACK: v strange way to do this, but it works, maybe refactor?
     bot = MagicMock()
 
-    user = MagicMock()
-    user.id = 123
-    user.name = "Testing"
+    user = mock_discord_user
 
     interaction = AsyncMock(spec=Interaction)
     interaction.user = user
     interaction.response = AsyncMock()
     interaction.edit_original_response = AsyncMock()
 
-    stock_cog = stock.Stock(bot)
-    fake_user = MagicMock(spec=User)
+    stock_cog = Stock(bot)
 
     mocker.patch("cogs.stock.get_stock", return_value=None)
     mocker.patch("cogs.stock.get_stock_name", return_value=None)
-    mocker.patch("db.utils.get_user", return_value=fake_user)
-    mocker.patch("db.utils.add_user", return_value=fake_user)
+    mocker.patch("db.utils.get_user", return_value=user)
+    mocker.patch("db.utils.add_user", return_value=user)
 
     bound_callback = stock_cog.add_watching.callback.__get__(stock_cog, type(stock_cog))
     await bound_callback(interaction, "https://testing.com")
@@ -344,7 +348,7 @@ async def test_add_watching_invalid_name(mocker):
 async def test_list_watching(mocker):
     bot = MagicMock()
     interaction = AsyncMock()
-    stock_cog = stock.Stock(bot)
+    stock_cog = Stock(bot)
 
     user_stocks = [
         User_Stock(
@@ -387,7 +391,7 @@ async def test_list_watching(mocker):
 async def test_list_watching_empty(mocker):
     bot = MagicMock()
     interaction = AsyncMock()
-    stock_cog = stock.Stock(bot)
+    stock_cog = Stock(bot)
 
     mocker.patch("cogs.stock.get_users_watched", return_value=[])
     bound_callback = stock_cog.list_watching.callback.__get__(
@@ -412,7 +416,7 @@ async def test_command_error_handing(error, expected_message):
     interaction = AsyncMock(spec=Interaction)
     interaction.response = AsyncMock()
     interaction.response.send_message = AsyncMock()
-    cog = stock.Stock(bot)
+    cog = Stock(bot)
 
     if expected_message is None:
         with pytest.raises(Exception):
@@ -476,3 +480,125 @@ async def test_stock_status_update_notif(mocker):
 
     message = "Test Product is now **Out of stock**!"
     user.send.assert_called_with(message)
+
+
+@pytest.mark.asyncio
+async def test_remove_stock_with_stocks(mocker):
+    bot = MagicMock()
+    interaction = AsyncMock(spec=Interaction)
+    interaction.response = AsyncMock()
+    interaction.response.send_message = AsyncMock()
+
+    stocks = [
+        MagicMock(
+            user_id=123,
+            stock_url="https://testing1.com",
+            stock_name="Test Product 1",
+            stock_status=1,
+            price="$123.45",
+        ),
+        MagicMock(
+            user_id=123,
+            stock_url="https://testing2.com",
+            stock_name="Test Product 2",
+            stock_status=0,
+            price="$543.21",
+        ),
+    ]
+    mocker.patch("cogs.stock.get_users_watched", return_value=stocks)
+    stock_cog = Stock(bot)
+    bound_callback = stock_cog.remove_watching.callback.__get__(
+        stock_cog, type(stock_cog)
+    )
+    await bound_callback(interaction)
+
+    interaction.response.send_message.assert_called_once()
+    call_args = interaction.response.send_message.call_args
+    assert "Click a button to delete a stock" in call_args[0][0]
+    assert isinstance(call_args[1]["view"], Remove)
+    assert call_args[1]["ephemeral"] is True
+
+
+@pytest.mark.asyncio
+async def test_remove_stock_with_no_stocks(mocker):
+    bot = MagicMock()
+    interaction = AsyncMock(spec=Interaction)
+    interaction.response = AsyncMock()
+    interaction.response.send_message = AsyncMock()
+
+    mocker.patch("cogs.stock.get_users_watched", return_value=[])
+    stock_cog = Stock(bot)
+    bound_callback = stock_cog.remove_watching.callback.__get__(
+        stock_cog, type(stock_cog)
+    )
+    await bound_callback(interaction)
+
+    interaction.response.send_message.assert_called_once()
+    call_args = interaction.response.send_message.call_args
+    assert "You have nothing watched. Add some products to watch!" in call_args[0][0]
+    assert call_args[1]["ephemeral"] is True
+
+
+@pytest.mark.asyncio
+async def test_remove_button_callback(mocker):
+    interaction = AsyncMock(spec=Interaction)
+    interaction.user = MagicMock(id=12345)
+    interaction.response.edit_message = AsyncMock()
+
+    initial_stock = MagicMock(
+        user_id=12345,
+        stock_url="https://testing.com",
+        stock_name="Test Product",
+        stock_status=1,
+        price="$11.11",
+    )
+    remaining_stock = [
+        MagicMock(
+            user_id=12345,
+            stock_url="https://testing.com/2",
+            stock_name="Test Product 2",
+            stock_status=1,
+            price="$22.22",
+        )
+    ]
+    remove_mock = mocker.patch("cogs.stock.remove_user_watching")
+    get_watched_mock = mocker.patch(
+        "cogs.stock.get_users_watched", return_value=remaining_stock
+    )
+
+    button = RemoveButton(0, initial_stock)
+    await button.callback(interaction)
+
+    remove_mock.assert_called_once_with(interaction.user, initial_stock)
+    get_watched_mock.assert_called_once_with(interaction.user)
+
+    interaction.response.edit_message.assert_called_once()
+    call_args = interaction.response.edit_message.call_args[1]
+    assert "has been deleted" in call_args["content"]
+    assert isinstance(call_args["view"], Remove)
+    assert len(call_args["view"].children) == len(remaining_stock)
+
+
+@pytest.mark.asyncio
+async def test_remove_view_init():
+    stocks = [
+        User_Stock(
+            user_id=123,
+            stock_url="https://testing1.com",
+            stock_name="Test Product 1",
+            stock_status=1,
+            price="$123.45",
+        ),
+        User_Stock(
+            user_id=123,
+            stock_url="https://testing2.com",
+            stock_name="Test Product 2",
+            stock_status=0,
+            price="$543.21",
+        ),
+    ]
+    view = Remove(stocks)
+    assert len(view.children) == len(stocks)
+    for index, child in enumerate(view.children):
+        assert isinstance(child, RemoveButton)
+        assert child.label == f"{index + 1}: {stocks[index].stock_name}"
