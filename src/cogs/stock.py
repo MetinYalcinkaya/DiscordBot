@@ -132,20 +132,15 @@ class Stock(commands.Cog, name="Stock Watcher"):
                 content=f"[{stock.stock_name}](<{url}>) is already being watched!"
             )
 
-    # TODO: Add remove functionality
-    # @app_commands.describe(number="The index of the stock you wish to remove")
     @stock.command(name="remove", description="Remove a product from your watchlist")
     async def remove_watching(self, interaction: discord.Interaction):
-        # TODO: get watched stocks for given user, give them an index
-        # and create buttons the user can interact with based on that
-
         watched_stocks = await get_users_watched(interaction.user)
-        if not watched_stocks:
-            return
-        for index, stock in enumerate(watched_stocks):
-            print("temp")
-
-        print("Hello, world!")
+        if watched_stocks:
+            await interaction.response.send_message(
+                "Click a button to delete a stock that you are watching:",
+                view=Remove(watched_stocks),
+                ephemeral=True,
+            )
 
     @stock.command(name="list", description="List all product in your watchlist")
     async def list_watching(self, interaction: discord.Interaction):
@@ -517,8 +512,46 @@ async def update_stock_price(stock: User_Stock, price: str):
             logger.info(f"Stock price updated for {stock.stock_url}")
 
 
-# class Button(discord.ui.Button):
-#
+async def remove_user_watching(user: discord.Member | discord.User, stock: User_Stock):
+    with Session() as session:
+        try:
+            session.delete(stock)
+        except Exception:
+            logger.error(f"Error deleting {user}: {stock}")
+            session.rollback()
+        finally:
+            session.commit()
+            logger.info(f"Stock deleted for {user}: {stock}")
+
+
+class RemoveButton(discord.ui.Button["Remove"]):
+    def __init__(self, index: int, stock: User_Stock):
+        super().__init__(
+            style=discord.ButtonStyle.primary, label=f"{index + 1}: {stock.stock_name}"
+        )
+        self.index = index
+        self.stock = stock
+
+    # Called whenever a button is pressed
+    async def callback(self, interaction: discord.Interaction):
+        await remove_user_watching(interaction.user, self.stock)
+        watched_stocks = await get_users_watched(interaction.user)
+        if watched_stocks:
+            await interaction.response.edit_message(
+                content=f"**{self.stock.stock_name}** has been deleted. Select another or dismiss:",
+                view=Remove(watched_stocks),
+            )
+
+
+class Remove(discord.ui.View):
+    def __init__(self, watched: List[User_Stock]):
+        super().__init__()
+        self.watched = watched
+
+        # Format list of watched stocks
+        for index, stock in enumerate(watched):
+            new_button = RemoveButton(index, stock)
+            self.add_item(new_button)
 
 
 async def setup(bot):
