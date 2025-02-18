@@ -49,6 +49,7 @@ Various random number generated tools, such as coin flips and dice rolls
 3. From the root directory of the project, run `uv sync`
 4. Setup your `.env` file
    - Use `example.env` as the base
+   - Change file name to `.env`
 5. Run the project
    - `./main.sh` or
    - `uv run src/__main__.py`
