@@ -5,11 +5,12 @@ A simple Discord bot written in Python, managed with [uv](https://github.com/ast
 ## Dependencies
 
 - [Discord.py](https://github.com/Rapptz/discord.py); Discord API interaction
-- [BeautifulSoup](https://code.launchpad.net/beautifulsoup); scraping and parsing webpages
+- [BeautifulSoup](https://code.launchpad.net/beautifulsoup); Scraping and parsing webpages
 - [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy); SQLite database interaction
-- [Playwright](https://github.com/microsoft/playwright-python); headless browser for http requests
+- [Playwright](https://github.com/microsoft/playwright-python); Headless browser for http requests
 - [Dotenv](https://github.com/theskumar/python-dotenv); .env file functionality
-- [PyTest](https://github.com/pytest-dev/pytest/): unit testing
+- [Pytest](https://github.com/pytest-dev/pytest/); Unit testing
+- [Docker (Optional)](https://docker.com); For easier install
 
 ## Features
 
@@ -25,40 +26,32 @@ Various random number generated tools, such as coin flips and dice rolls
 
 ## Installation
 
-WIP
+## Docker
 
-## TODO
+> [!NOTE]
+> Currently every time you `docker build`, it will wipe the database file and
+> create a fresh one in place
 
-### General
+1. Clone this repository
+   `git clone https://github.com/MetinYalcinkaya/DiscordBot`
+2. Setup `.env` file
+   - Use `example.env` as the base
+3. Build the `Dockerfile` from the root directory
+   `docker build -t discord_bot .`
+4. Run the docker container
+   `docker run discord_bot:latest`
 
-- [ ] Install instructions
-  - [ ] Docker?
-- [ ] CLI interactivity
-- [x] Unit testing
-- [x] Logging
+### With UV
 
-### Core
-
-- [x] Traverse cogs dir to load cogs rather than hard coding
-- [x] Rewrite ! prefix to use [app_commands/trees](https://discordpy.readthedocs.io/en/stable/interactions/api.html#appcommand)
-
-### Stock Checker
-
-- [x] Update message as stock is checked #17fb574
-- [x] Automated checking #07be7c6
-- [x] Pricing tracker #fe1e985
-- [x] Deleting watched stocks with buttons
-
-### RNG
-
-- [x] Find better name and group together
-  - RNG seems to be good
-- [x] Coin flip
-- [ ] Dice roll
-- [ ] Wheel of fortune?
-  - Multiple options, removes previous when landed
-
-### Other
+1. Install [astral-sh/uv](https://github.com/astral-sh/uv?tab=readme-ov-file#installation) for your operating system
+2. Clone this repository
+   `git clone https://github.com/MetinYalcinkaya/DiscordBot`
+3. From the root directory of the project, run `uv sync`
+4. Setup your `.env` file
+   - Use `example.env` as the base
+5. Run the project
+   - `./main.sh` or
+   - `uv run src/__main__.py`
 
 ## Acknowledgments
 
