@@ -26,7 +26,15 @@ Various random number generated tools, such as coin flips and dice rolls
 
 ## Installation
 
-## Docker
+### Prerequisites
+
+1. A Discord bot token from Discord's [developer portal](https://discordapp.com/developers/applications/)
+2. Your Discord Server Guild ID and your Discord User ID
+   - Enable Discord's 'Developer Mode' in `Settings > Advanced > Developer Mode`
+   - Right click the Server and `Copy Server ID`
+   - Left click your profile picture and `Copy User ID`
+
+### Docker
 
 > [!NOTE]
 > Currently every time you `docker build`, it will wipe the database file and
