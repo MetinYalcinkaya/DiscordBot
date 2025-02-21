@@ -3,9 +3,9 @@ FROM ghcr.io/astral-sh/uv:debian
 WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1
-
 ENV UV_LINK_MODE=copy
-
+ENV PATH="/app/.venv/bin:$PATH"
+ENV DB_PATH=/app/src/db/main.db
 RUN apt-get update
 
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -17,15 +17,19 @@ ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
     
-ENV PATH="/app/.venv/bin:$PATH"
 
 RUN mkdir -p src/db src/logs
 
 VOLUME /app/src/db
 VOLUME /app/src/logs
 
-RUN if [ ! -f src/db/main.db ]; then \
+CMD /bin/bash -c '\
+  if [ ! -f $DB_PATH ]; then \
+    echo "Database not found, creating..." && \
     uv run src/migrations/create.py; \
-fi
+  else \
+    echo "Database already exists, skipping."; \
+  fi'
+
 
 ENTRYPOINT ["uv", "run", "src/__main__.py"]
