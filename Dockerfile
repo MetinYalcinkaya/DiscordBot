@@ -31,5 +31,7 @@ CMD /bin/bash -c '\
     echo "Database already exists, skipping."; \
   fi'
 
+RUN ["playwright", "install"]
+
 
 ENTRYPOINT ["uv", "run", "src/__main__.py"]
