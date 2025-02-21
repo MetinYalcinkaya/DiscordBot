@@ -32,6 +32,7 @@ CMD /bin/bash -c '\
   fi'
 
 RUN ["playwright", "install"]
+RUN ["playwright", "install-deps"]
 
 
 ENTRYPOINT ["uv", "run", "src/__main__.py"]
