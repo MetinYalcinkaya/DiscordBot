@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    volumes:
+      - db_data:/app/src/db
+
+volumes:
+  db_data:
+    name: app_database

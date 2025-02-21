@@ -27,10 +27,6 @@ sql_tables = {
 }
 
 for key in sql_tables:
-    _ = cursor.execute(f"DROP TABLE IF EXISTS {key}")
-    print(f"Dropped table {key}")
-
-for key in sql_tables:
     _ = cursor.execute(sql_tables[key])
     print(f"Created table {key}")
 

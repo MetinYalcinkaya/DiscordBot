@@ -19,9 +19,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     
 ENV PATH="/app/.venv/bin:$PATH"
 
+RUN mkdir -p src/db
+
+VOLUME /app/src/db
+
+RUN if [ ! -f src/db/main.db ]; then \
+    uv run src/migrations/create.py; \
+fi
+
 # need to create db, otherwire returns None
 # RUN ["python", "src/migrations/create.py"]
 # RUN uv run src/migrations/create.py
-RUN ["uv", "run", "src/migrations/create.py"]
+# RUN ["uv", "run", "src/migrations/create.py"]
 
 ENTRYPOINT ["uv", "run", "src/__main__.py"]

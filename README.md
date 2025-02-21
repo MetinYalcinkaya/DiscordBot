@@ -36,18 +36,12 @@ Various random number generated tools, such as coin flips and dice rolls
 
 ### Docker
 
-> [!NOTE]
-> Currently every time you `docker build`, it will wipe the database file and
-> create a fresh one in place
-
 1. Clone this repository
    `git clone https://github.com/MetinYalcinkaya/DiscordBot`
 2. Setup `.env` file
    - Use `example.env` as the base
-3. Build the `Dockerfile` from the root directory
-   `docker build -t discord_bot .`
-4. Run the docker container
-   `docker run discord_bot:latest`
+3. Build and run using `docker-compose`
+   `docker-compose up -d --build`
 
 ### With UV
 
@@ -58,7 +52,10 @@ Various random number generated tools, such as coin flips and dice rolls
 4. Setup your `.env` file
    - Use `example.env` as the base
    - Change file name to `.env`
-5. Run the project
+5. Create the database
+   `./create.sh`
+   or `python src/migrations/create.py`
+6. Run the project
    - `./main.sh` or
    - `uv run src/__main__.py`
 
