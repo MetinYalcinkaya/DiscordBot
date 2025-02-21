@@ -19,6 +19,8 @@ intents.members = True
 intents.message_content = True
 
 COGS_DIR = Path(__file__).parent.joinpath("cogs")
+LOGS_DIR = Path(__file__).parent.joinpath("logs")
+LOGS_DIR.mkdir(exist_ok=True)
 
 MY_GUILD = discord.Object(id=config.MY_GUILD_ID)
 
@@ -26,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 # Logging setup
 file_handler = logging.handlers.RotatingFileHandler(
-    filename="discord.log",
+    filename=LOGS_DIR / "discord.log",
     encoding="utf-8",
     maxBytes=32 * 1024 * 1024,
     backupCount=5,
-    mode="w",
+    mode="a",
 )
 dt_format = "%Y-%m-%d %H:%M:%S"
 formatter = logging.Formatter(
@@ -39,8 +41,18 @@ formatter = logging.Formatter(
 
 file_handler.setFormatter(formatter)
 
-logging.basicConfig(level=logging.DEBUG, handlers=[file_handler])
-logging.getLogger("discord").setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[file_handler, console_handler],
+    format="[{asctime}] [{levelname:<8}] {name}: {message}",
+    style="{",
+    datefmt=dt_format,
+)
+logging.getLogger("discord").setLevel(logging.INFO)
+logging.getLogger("discord.http").setLevel(logging.WARNING)
 
 
 class Cheeky(commands.Bot):

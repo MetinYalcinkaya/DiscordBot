@@ -3,7 +3,10 @@ services:
     build: .
     volumes:
       - db_data:/app/src/db
+      - log_data:/app/src/logs
 
 volumes:
   db_data:
     name: app_database
+  log_data:
+    name: app_logs
