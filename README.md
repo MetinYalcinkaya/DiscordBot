@@ -37,17 +37,28 @@ Various random number generated tools, such as coin flips and dice rolls
 ### Docker
 
 1. Clone this repository
-   `git clone https://github.com/MetinYalcinkaya/DiscordBot`
+
+```bash
+git clone https://github.com/MetinYalcinkaya/DiscordBot
+```
+
 2. Setup `.env` file
    - Use `example.env` as the base
 3. Build and run using `docker-compose`
-   `docker-compose up -d --build`
+
+```bash
+   docker-compose up -d --build
+```
 
 ### With UV
 
 1. Install [astral-sh/uv](https://github.com/astral-sh/uv?tab=readme-ov-file#installation) for your operating system
 2. Clone this repository
-   `git clone https://github.com/MetinYalcinkaya/DiscordBot`
+
+```bash
+git clone https://github.com/MetinYalcinkaya/DiscordBot
+```
+
 3. From the root directory of the project, run `uv sync`
 4. Setup your `.env` file
    - Use `example.env` as the base
